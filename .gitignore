@@ -1,0 +1,9 @@
+.env
+.DS_Store
+.venv/
+__pycache__/
+node_modules/
+*.code-workspace
+poc/.credentials.local
+poc/.credentials.old.local
+poc/.ai_bot.json

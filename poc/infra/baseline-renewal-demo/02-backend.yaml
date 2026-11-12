@@ -1,0 +1,212 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: olive.business.connect demo - DynamoDB state table, IAM role and the four Lambdas
+
+Parameters:
+  DemoPhoneNumber:
+    Type: String
+    Description: The only number the demo is allowed to dial (E.164)
+  DemoPhoneWilliam:
+    Type: String
+    Description: Developer's Colombian number for international tests (E.164). Also an allowed destination.
+  DemoPhoneHector:
+    Type: String
+    Description: Colombian tester number (E.164). Also an allowed destination.
+  ConnectInstanceId:
+    Type: String
+  ConnectInstanceArn:
+    Type: String
+  SourcePhoneNumber:
+    Type: String
+    Description: Claimed Connect number used as caller id (E.164)
+  ConnectFlowId:
+    Type: String
+    Default: pending
+    Description: Contact flow dialed by campaign-run. Set after the flow stack exists.
+  CodeBucket:
+    Type: String
+  DemoMaxAttempts:
+    Type: Number
+    Default: 3
+    MinValue: 1
+    MaxValue: 99
+    Description: Maximum attempts per customer in this sandbox demo
+  CodeKey:
+    Type: String
+  EmailRouterUrl:
+    Type: String
+    Default: ''
+  EmailRouterApiKey:
+    Type: String
+    Default: ''
+    NoEcho: true
+  DemoEmailRecipient:
+    Type: String
+    Default: ''
+    NoEcho: true
+  DemoRenewalUrl:
+    Type: String
+    Default: ''
+    NoEcho: true
+
+Resources:
+  StateTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: ConnectDemoState
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: pk, AttributeType: S }
+        - { AttributeName: sk, AttributeType: S }
+      KeySchema:
+        - { AttributeName: pk, KeyType: HASH }
+        - { AttributeName: sk, KeyType: RANGE }
+
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: demo-access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:DeleteItem, dynamodb:Query, dynamodb:Scan]
+                Resource: !GetAtt StateTable.Arn
+              - Effect: Allow
+                Action: connect:StartOutboundVoiceContact
+                Resource: !Sub '${ConnectInstanceArn}/contact/*'
+
+  GetCustomerFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: connect-demo-get-customer
+      Handler: Olive.Business.Connect.Lambdas::Olive.Business.Connect.Lambdas.Functions::GetCustomer
+      Runtime: dotnet10
+      Architectures: [arm64]
+      MemorySize: 1024
+      Timeout: 10
+      Role: !GetAtt LambdaRole.Arn
+      Code: { S3Bucket: !Ref CodeBucket, S3Key: !Ref CodeKey }
+      Environment:
+        Variables:
+          DEMO_PHONE_NUMBER: !Ref DemoPhoneNumber
+          DEMO_PHONE_WILLIAM: !Ref DemoPhoneWilliam
+          DEMO_PHONE_HECTOR: !Ref DemoPhoneHector
+          TABLE_NAME: !Ref StateTable
+          CONNECT_INSTANCE_ID: !Ref ConnectInstanceId
+          CONNECT_FLOW_ID: !Ref ConnectFlowId
+          SOURCE_PHONE_NUMBER: !Ref SourcePhoneNumber
+
+  DialogFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: connect-demo-dialog
+      Handler: Olive.Business.Connect.Lambdas::Olive.Business.Connect.Lambdas.Functions::Dialog
+      Runtime: dotnet10
+      Architectures: [arm64]
+      MemorySize: 1024
+      Timeout: 10
+      Role: !GetAtt LambdaRole.Arn
+      Code: { S3Bucket: !Ref CodeBucket, S3Key: !Ref CodeKey }
+      Environment:
+        Variables:
+          DEMO_PHONE_NUMBER: !Ref DemoPhoneNumber
+          DEMO_PHONE_WILLIAM: !Ref DemoPhoneWilliam
+          DEMO_PHONE_HECTOR: !Ref DemoPhoneHector
+          EMAIL_ROUTER_URL: !Ref EmailRouterUrl
+          EMAIL_ROUTER_API_KEY: !Ref EmailRouterApiKey
+          DEMO_EMAIL_RECIPIENT: !Ref DemoEmailRecipient
+          DEMO_RENEWAL_URL: !Ref DemoRenewalUrl
+          TABLE_NAME: !Ref StateTable
+          CONNECT_INSTANCE_ID: !Ref ConnectInstanceId
+          CONNECT_FLOW_ID: !Ref ConnectFlowId
+          SOURCE_PHONE_NUMBER: !Ref SourcePhoneNumber
+
+  WriteOutcomeFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: connect-demo-write-outcome
+      Handler: Olive.Business.Connect.Lambdas::Olive.Business.Connect.Lambdas.Functions::WriteOutcome
+      Runtime: dotnet10
+      Architectures: [arm64]
+      MemorySize: 1024
+      Timeout: 10
+      Role: !GetAtt LambdaRole.Arn
+      Code: { S3Bucket: !Ref CodeBucket, S3Key: !Ref CodeKey }
+      Environment:
+        Variables:
+          DEMO_PHONE_NUMBER: !Ref DemoPhoneNumber
+          DEMO_PHONE_WILLIAM: !Ref DemoPhoneWilliam
+          DEMO_PHONE_HECTOR: !Ref DemoPhoneHector
+          TABLE_NAME: !Ref StateTable
+          CONNECT_INSTANCE_ID: !Ref ConnectInstanceId
+          CONNECT_FLOW_ID: !Ref ConnectFlowId
+          SOURCE_PHONE_NUMBER: !Ref SourcePhoneNumber
+
+  CampaignRunFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: connect-demo-campaign-run
+      Handler: Olive.Business.Connect.Lambdas::Olive.Business.Connect.Lambdas.Functions::CampaignRun
+      Runtime: dotnet10
+      Architectures: [arm64]
+      MemorySize: 1024
+      Timeout: 60
+      Role: !GetAtt LambdaRole.Arn
+      Code: { S3Bucket: !Ref CodeBucket, S3Key: !Ref CodeKey }
+      Environment:
+        Variables:
+          DEMO_PHONE_NUMBER: !Ref DemoPhoneNumber
+          DEMO_PHONE_WILLIAM: !Ref DemoPhoneWilliam
+          DEMO_PHONE_HECTOR: !Ref DemoPhoneHector
+          DEMO_MAX_ATTEMPTS: !Ref DemoMaxAttempts
+          TABLE_NAME: !Ref StateTable
+          CONNECT_INSTANCE_ID: !Ref ConnectInstanceId
+          CONNECT_FLOW_ID: !Ref ConnectFlowId
+          SOURCE_PHONE_NUMBER: !Ref SourcePhoneNumber
+
+  ConnectInvokesGetCustomer:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref GetCustomerFunction
+      Action: lambda:InvokeFunction
+      Principal: connect.amazonaws.com
+      SourceArn: !Ref ConnectInstanceArn
+      SourceAccount: !Ref AWS::AccountId
+
+  ConnectInvokesWriteOutcome:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref WriteOutcomeFunction
+      Action: lambda:InvokeFunction
+      Principal: connect.amazonaws.com
+      SourceArn: !Ref ConnectInstanceArn
+      SourceAccount: !Ref AWS::AccountId
+
+  LexInvokesDialog:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref DialogFunction
+      Action: lambda:InvokeFunction
+      Principal: lexv2.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !Sub 'arn:${AWS::Partition}:lex:${AWS::Region}:${AWS::AccountId}:bot-alias/*/*'
+
+Outputs:
+  DialogFunctionArn:
+    Value: !GetAtt DialogFunction.Arn
+    Export: { Name: connect-demo-dialog-arn }
+  GetCustomerFunctionArn:
+    Value: !GetAtt GetCustomerFunction.Arn
+  WriteOutcomeFunctionArn:
+    Value: !GetAtt WriteOutcomeFunction.Arn
+  CampaignRunFunctionName:
+    Value: !Ref CampaignRunFunction

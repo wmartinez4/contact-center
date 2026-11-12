@@ -1,0 +1,306 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: olive.business.connect demo - Lex V2 bot (en_US + es_US). Lex recognizes intents; the dialog Lambda runs the script.
+
+Parameters:
+  DialogFunctionArn:
+    Type: String
+
+Resources:
+  ConversationLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /connect-demo/lex-conversations
+      RetentionInDays: 14
+
+  LexRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lexv2.amazonaws.com }
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: polly
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: polly:SynthesizeSpeech
+                Resource: '*'
+        - PolicyName: conversation-logs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt ConversationLogGroup.Arn
+
+  Bot:
+    Type: AWS::Lex::Bot
+    Properties:
+      Name: OliveConnectDemo
+      Description: Demo bot for the proactive outreach call
+      RoleArn: !GetAtt LexRole.Arn
+      DataPrivacy: { ChildDirected: false }
+      IdleSessionTTLInSeconds: 300
+      AutoBuildBotLocales: true
+      BotLocales:
+        - LocaleId: en_US
+          Description: English script
+          NluConfidenceThreshold: 0.4
+          VoiceSettings: { VoiceId: Danielle, Engine: generative }
+          Intents:
+            - Name: 'Yes'
+              SampleUtterances:
+                - Utterance: 'yes'
+                - Utterance: 'yeah'
+                - Utterance: 'yep'
+                - Utterance: 'sure'
+                - Utterance: 'correct'
+                - Utterance: 'that''s right'
+                - Utterance: 'right'
+                - Utterance: 'okay'
+                - Utterance: 'ok'
+                - Utterance: 'go ahead'
+                - Utterance: 'please do'
+                - Utterance: 'absolutely'
+                - Utterance: 'yes please'
+                - Utterance: 'that is correct'
+                - Utterance: 'speaking'
+                - Utterance: 'this is he'
+                - Utterance: 'this is she'
+                - Utterance: 'that''s me'
+                - Utterance: 'it is me'
+                - Utterance: 'send it'
+                - Utterance: 'send me the link'
+              FulfillmentCodeHook: { Enabled: true }
+            - Name: 'No'
+              SampleUtterances:
+                - Utterance: 'no'
+                - Utterance: 'nope'
+                - Utterance: 'no thanks'
+                - Utterance: 'no thank you'
+                - Utterance: 'not really'
+                - Utterance: 'incorrect'
+                - Utterance: 'that''s wrong'
+                - Utterance: 'wrong'
+                - Utterance: 'not correct'
+                - Utterance: 'I don''t think so'
+                - Utterance: 'not now'
+                - Utterance: 'wrong number'
+                - Utterance: 'not me'
+                - Utterance: 'he''s not here'
+                - Utterance: 'she is not here'
+              FulfillmentCodeHook: { Enabled: true }
+            - Name: WantsHuman
+              SampleUtterances:
+                - Utterance: 'agent'
+                - Utterance: 'representative'
+                - Utterance: 'operator'
+                - Utterance: 'talk to a person'
+                - Utterance: 'speak to a human'
+                - Utterance: 'I want an agent'
+                - Utterance: 'connect me to an agent'
+                - Utterance: 'speak with someone'
+                - Utterance: 'human'
+                - Utterance: 'real person'
+                - Utterance: 'talk to someone'
+                - Utterance: 'transfer me'
+              FulfillmentCodeHook: { Enabled: true }
+            - Name: OptOut
+              SampleUtterances:
+                - Utterance: 'stop calling'
+                - Utterance: 'stop calling me'
+                - Utterance: 'do not call'
+                - Utterance: 'don''t call me'
+                - Utterance: 'remove me from your list'
+                - Utterance: 'take me off your list'
+                - Utterance: 'unsubscribe'
+                - Utterance: 'opt out'
+                - Utterance: 'never call again'
+                - Utterance: 'do not call me again'
+              FulfillmentCodeHook: { Enabled: true }
+            - Name: SwitchToSpanish
+              SampleUtterances:
+                - Utterance: 'Spanish'
+                - Utterance: 'speak Spanish'
+                - Utterance: 'in Spanish'
+                - Utterance: 'español'
+                - Utterance: 'do you speak Spanish'
+                - Utterance: 'switch to Spanish'
+                - Utterance: 'Spanish please'
+              FulfillmentCodeHook: { Enabled: true }
+            - Name: SwitchToEnglish
+              SampleUtterances:
+                - Utterance: 'English'
+                - Utterance: 'in English'
+                - Utterance: 'speak English'
+                - Utterance: 'switch to English'
+                - Utterance: 'English please'
+              FulfillmentCodeHook: { Enabled: true }
+            - Name: ProvideMileage
+              SampleUtterances:
+                - Utterance: '{mileage}'
+                - Utterance: '{mileage} miles'
+                - Utterance: 'it has {mileage} miles'
+                - Utterance: 'about {mileage} miles'
+                - Utterance: 'around {mileage}'
+                - Utterance: 'it''s {mileage}'
+                - Utterance: 'the mileage is {mileage}'
+                - Utterance: 'approximately {mileage} miles'
+                - Utterance: 'I have {mileage} miles'
+              FulfillmentCodeHook: { Enabled: true }
+              SlotPriorities:
+                - { Priority: 1, SlotName: mileage }
+              Slots:
+                - Name: mileage
+                  SlotTypeName: AMAZON.Number
+                  ValueElicitationSetting: { SlotConstraint: Optional }
+            - Name: FallbackIntent
+              ParentIntentSignature: AMAZON.FallbackIntent
+              FulfillmentCodeHook: { Enabled: true }
+        - LocaleId: es_US
+          Description: Spanish script
+          NluConfidenceThreshold: 0.4
+          VoiceSettings: { VoiceId: Lupe, Engine: generative }
+          Intents:
+            - Name: 'Yes'
+              SampleUtterances:
+                - Utterance: 'sí'
+                - Utterance: 'si'
+                - Utterance: 'claro'
+                - Utterance: 'correcto'
+                - Utterance: 'así es'
+                - Utterance: 'de acuerdo'
+                - Utterance: 'adelante'
+                - Utterance: 'con gusto'
+                - Utterance: 'exacto'
+                - Utterance: 'afirmativo'
+                - Utterance: 'él habla'
+                - Utterance: 'ella habla'
+                - Utterance: 'soy yo'
+                - Utterance: 'sí por favor'
+                - Utterance: 'está bien'
+                - Utterance: 'dale'
+                - Utterance: 'envíeme el enlace'
+                - Utterance: 'sí envíelo'
+              FulfillmentCodeHook: { Enabled: true }
+            - Name: 'No'
+              SampleUtterances:
+                - Utterance: 'no'
+                - Utterance: 'no gracias'
+                - Utterance: 'negativo'
+                - Utterance: 'incorrecto'
+                - Utterance: 'no es correcto'
+                - Utterance: 'número equivocado'
+                - Utterance: 'no soy yo'
+                - Utterance: 'equivocado'
+                - Utterance: 'ahora no'
+                - Utterance: 'no por favor'
+                - Utterance: 'no es así'
+              FulfillmentCodeHook: { Enabled: true }
+            - Name: WantsHuman
+              SampleUtterances:
+                - Utterance: 'agente'
+                - Utterance: 'representante'
+                - Utterance: 'operador'
+                - Utterance: 'hablar con una persona'
+                - Utterance: 'quiero un agente'
+                - Utterance: 'hablar con alguien'
+                - Utterance: 'una persona'
+                - Utterance: 'persona real'
+                - Utterance: 'comuníqueme con un agente'
+                - Utterance: 'páseme con un agente'
+                - Utterance: 'quiero hablar con un humano'
+              FulfillmentCodeHook: { Enabled: true }
+            - Name: OptOut
+              SampleUtterances:
+                - Utterance: 'no llamar'
+                - Utterance: 'dejen de llamarme'
+                - Utterance: 'no me llamen más'
+                - Utterance: 'quítenme de su lista'
+                - Utterance: 'no quiero más llamadas'
+                - Utterance: 'no me vuelvan a llamar'
+                - Utterance: 'borren mi número'
+              FulfillmentCodeHook: { Enabled: true }
+            - Name: SwitchToSpanish
+              SampleUtterances:
+                - Utterance: 'español'
+                - Utterance: 'en español'
+                - Utterance: 'hablar español'
+                - Utterance: 'hable español'
+              FulfillmentCodeHook: { Enabled: true }
+            - Name: SwitchToEnglish
+              SampleUtterances:
+                - Utterance: 'inglés'
+                - Utterance: 'en inglés'
+                - Utterance: 'English'
+                - Utterance: 'hablar inglés'
+                - Utterance: 'hable inglés'
+                - Utterance: 'cambiar a inglés'
+              FulfillmentCodeHook: { Enabled: true }
+            - Name: ProvideMileage
+              SampleUtterances:
+                - Utterance: '{mileage}'
+                - Utterance: '{mileage} millas'
+                - Utterance: 'tiene {mileage} millas'
+                - Utterance: 'como {mileage} millas'
+                - Utterance: 'unas {mileage} millas'
+                - Utterance: 'son {mileage}'
+                - Utterance: 'el kilometraje es {mileage}'
+                - Utterance: 'aproximadamente {mileage} millas'
+              FulfillmentCodeHook: { Enabled: true }
+              SlotPriorities:
+                - { Priority: 1, SlotName: mileage }
+              Slots:
+                - Name: mileage
+                  SlotTypeName: AMAZON.Number
+                  ValueElicitationSetting: { SlotConstraint: Optional }
+            - Name: FallbackIntent
+              ParentIntentSignature: AMAZON.FallbackIntent
+              FulfillmentCodeHook: { Enabled: true }
+
+  BotVersionV8:
+    Type: AWS::Lex::BotVersion
+    Properties:
+      BotId: !Ref Bot
+      BotVersionLocaleSpecification:
+        - LocaleId: en_US
+          BotVersionLocaleDetails: { SourceBotVersion: DRAFT }
+        - LocaleId: es_US
+          BotVersionLocaleDetails: { SourceBotVersion: DRAFT }
+
+  BotAlias:
+    Type: AWS::Lex::BotAlias
+    Properties:
+      BotId: !Ref Bot
+      BotAliasName: live
+      BotVersion: !GetAtt BotVersionV8.BotVersion
+      ConversationLogSettings:
+        TextLogSettings:
+          - Enabled: true
+            Destination:
+              CloudWatch:
+                CloudWatchLogGroupArn: !GetAtt ConversationLogGroup.Arn
+                LogPrefix: lex
+      BotAliasLocaleSettings:
+        - LocaleId: en_US
+          BotAliasLocaleSetting:
+            Enabled: true
+            CodeHookSpecification:
+              LambdaCodeHook: { CodeHookInterfaceVersion: '1.0', LambdaArn: !Ref DialogFunctionArn }
+        - LocaleId: es_US
+          BotAliasLocaleSetting:
+            Enabled: true
+            CodeHookSpecification:
+              LambdaCodeHook: { CodeHookInterfaceVersion: '1.0', LambdaArn: !Ref DialogFunctionArn }
+
+Outputs:
+  BotId:
+    Value: !Ref Bot
+  BotAliasArn:
+    Value: !GetAtt BotAlias.Arn
+  BotAliasId:
+    Value: !GetAtt BotAlias.BotAliasId

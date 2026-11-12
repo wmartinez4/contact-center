@@ -1,0 +1,549 @@
+{
+  "Version": "2019-10-30",
+  "StartAction": "LogOn",
+  "Actions": [
+    {
+      "Identifier": "LogOn",
+      "Type": "UpdateFlowLoggingBehavior",
+      "Parameters": {
+        "FlowLoggingBehavior": "Enabled"
+      },
+      "Transitions": {
+        "NextAction": "AmdCheck",
+        "Errors": [],
+        "Conditions": []
+      }
+    },
+    {
+      "Identifier": "AmdCheck",
+      "Type": "CheckOutboundCallStatus",
+      "Parameters": {},
+      "Transitions": {
+        "NextAction": "GetCustomer",
+        "Errors": [
+          {
+            "NextAction": "GetCustomer",
+            "ErrorType": "NoMatchingError"
+          }
+        ],
+        "Conditions": [
+          {
+            "NextAction": "VoicemailWrite",
+            "Condition": {
+              "Operator": "Equals",
+              "Operands": [
+                "VoicemailBeep"
+              ]
+            }
+          },
+          {
+            "NextAction": "VoicemailWrite",
+            "Condition": {
+              "Operator": "Equals",
+              "Operands": [
+                "VoicemailNoBeep"
+              ]
+            }
+          },
+          {
+            "NextAction": "GetCustomer",
+            "Condition": {
+              "Operator": "Equals",
+              "Operands": [
+                "CallAnswered"
+              ]
+            }
+          },
+          {
+            "NextAction": "GetCustomer",
+            "Condition": {
+              "Operator": "Equals",
+              "Operands": [
+                "NotDetected"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "Identifier": "VoicemailWrite",
+      "Type": "InvokeLambdaFunction",
+      "Parameters": {
+        "LambdaFunctionARN": "${WriteOutcomeArn}",
+        "InvocationTimeLimitSeconds": "8",
+        "LambdaInvocationAttributes": {
+          "customerId": "$.Attributes.customerId",
+          "disposition": "Voicemail"
+        },
+        "ResponseValidation": {
+          "ResponseType": "STRING_MAP"
+        }
+      },
+      "Transitions": {
+        "NextAction": "Bye",
+        "Errors": [
+          {
+            "NextAction": "Bye",
+            "ErrorType": "NoMatchingError"
+          }
+        ],
+        "Conditions": []
+      }
+    },
+    {
+      "Identifier": "GetCustomer",
+      "Type": "InvokeLambdaFunction",
+      "Parameters": {
+        "LambdaFunctionARN": "${GetCustomerArn}",
+        "InvocationTimeLimitSeconds": "8",
+        "LambdaInvocationAttributes": {
+          "customerId": "$.Attributes.customerId"
+        },
+        "ResponseValidation": {
+          "ResponseType": "STRING_MAP"
+        }
+      },
+      "Transitions": {
+        "NextAction": "SetAttrs",
+        "Errors": [
+          {
+            "NextAction": "ErrorMsg",
+            "ErrorType": "NoMatchingError"
+          }
+        ],
+        "Conditions": []
+      }
+    },
+    {
+      "Identifier": "SetAttrs",
+      "Type": "UpdateContactAttributes",
+      "Parameters": {
+        "Attributes": {
+          "firstName": "$.External.firstName",
+          "language": "$.External.language",
+          "step": "$.External.step",
+          "retries": "$.External.retries",
+          "mileageAttempts": "$.External.mileageAttempts",
+          "pendingMileage": "$.External.pendingMileage",
+          "mileage": "$.External.mileage",
+          "pid": "$.External.pid",
+          "customerSummary": "$.External.customerSummary",
+          "promptMessage": "$.External.openingMessage"
+        }
+      },
+      "Transitions": {
+        "NextAction": "LangCheck",
+        "Errors": [
+          {
+            "NextAction": "ErrorMsg",
+            "ErrorType": "NoMatchingError"
+          }
+        ],
+        "Conditions": []
+      }
+    },
+    {
+      "Identifier": "LangCheck",
+      "Type": "Compare",
+      "Parameters": {
+        "ComparisonValue": "$.Attributes.language"
+      },
+      "Transitions": {
+        "NextAction": "VoiceEn",
+        "Errors": [
+          {
+            "NextAction": "VoiceEn",
+            "ErrorType": "NoMatchingCondition"
+          }
+        ],
+        "Conditions": [
+          {
+            "NextAction": "VoiceEs",
+            "Condition": {
+              "Operator": "Equals",
+              "Operands": [
+                "es"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "Identifier": "VoiceEn",
+      "Type": "UpdateContactTextToSpeechVoice",
+      "Parameters": {
+        "TextToSpeechVoice": "Danielle",
+        "TextToSpeechEngine": "Generative",
+        "TextToSpeechStyle": "None"
+      },
+      "Transitions": {
+        "NextAction": "LangEn",
+        "Errors": [
+          {
+            "NextAction": "ErrorMsg",
+            "ErrorType": "NoMatchingError"
+          }
+        ],
+        "Conditions": []
+      }
+    },
+    {
+      "Identifier": "LangEn",
+      "Type": "UpdateContactData",
+      "Parameters": {
+        "LanguageCode": "en-US"
+      },
+      "Transitions": {
+        "NextAction": "Lex",
+        "Errors": [
+          {
+            "NextAction": "ErrorMsg",
+            "ErrorType": "NoMatchingError"
+          }
+        ],
+        "Conditions": []
+      }
+    },
+    {
+      "Identifier": "VoiceEs",
+      "Type": "UpdateContactTextToSpeechVoice",
+      "Parameters": {
+        "TextToSpeechVoice": "Lupe",
+        "TextToSpeechEngine": "Generative",
+        "TextToSpeechStyle": "None"
+      },
+      "Transitions": {
+        "NextAction": "LangEs",
+        "Errors": [
+          {
+            "NextAction": "ErrorMsg",
+            "ErrorType": "NoMatchingError"
+          }
+        ],
+        "Conditions": []
+      }
+    },
+    {
+      "Identifier": "LangEs",
+      "Type": "UpdateContactData",
+      "Parameters": {
+        "LanguageCode": "es-US"
+      },
+      "Transitions": {
+        "NextAction": "Lex",
+        "Errors": [
+          {
+            "NextAction": "ErrorMsg",
+            "ErrorType": "NoMatchingError"
+          }
+        ],
+        "Conditions": []
+      }
+    },
+    {
+      "Identifier": "Lex",
+      "Type": "ConnectParticipantWithLexBot",
+      "Parameters": {
+        "Text": "$.Attributes.promptMessage",
+        "LexV2Bot": {
+          "AliasArn": "${LexAliasArn}"
+        },
+        "LexSessionAttributes": {
+          "customerId": "$.Attributes.customerId",
+          "step": "$.Attributes.step",
+          "language": "$.Attributes.language",
+          "retries": "$.Attributes.retries",
+          "mileageAttempts": "$.Attributes.mileageAttempts",
+          "pendingMileage": "$.Attributes.pendingMileage",
+          "mileage": "$.Attributes.mileage"
+        },
+        "LexTimeoutSeconds": {
+          "Text": "300"
+        }
+      },
+      "Transitions": {
+        "NextAction": "AfterLex",
+        "Errors": [
+          {
+            "NextAction": "AfterLex",
+            "ErrorType": "NoMatchingCondition"
+          },
+          {
+            "NextAction": "NoResponseWrite",
+            "ErrorType": "InputTimeLimitExceeded"
+          },
+          {
+            "NextAction": "ErrorMsg",
+            "ErrorType": "NoMatchingError"
+          }
+        ],
+        "Conditions": []
+      }
+    },
+    {
+      "Identifier": "NoResponseWrite",
+      "Type": "InvokeLambdaFunction",
+      "Parameters": {
+        "LambdaFunctionARN": "${WriteOutcomeArn}",
+        "InvocationTimeLimitSeconds": "8",
+        "LambdaInvocationAttributes": {
+          "customerId": "$.Attributes.customerId",
+          "disposition": "NoResponse"
+        },
+        "ResponseValidation": {
+          "ResponseType": "STRING_MAP"
+        }
+      },
+      "Transitions": {
+        "NextAction": "Bye",
+        "Errors": [
+          {
+            "NextAction": "Bye",
+            "ErrorType": "NoMatchingError"
+          }
+        ],
+        "Conditions": []
+      }
+    },
+    {
+      "Identifier": "AfterLex",
+      "Type": "UpdateContactAttributes",
+      "Parameters": {
+        "Attributes": {
+          "outcome": "$.Lex.SessionAttributes.outcome",
+          "step": "$.Lex.SessionAttributes.step",
+          "language": "$.Lex.SessionAttributes.language",
+          "retries": "$.Lex.SessionAttributes.retries",
+          "mileageAttempts": "$.Lex.SessionAttributes.mileageAttempts",
+          "pendingMileage": "$.Lex.SessionAttributes.pendingMileage",
+          "mileage": "$.Lex.SessionAttributes.mileage",
+          "promptMessage": "$.Lex.SessionAttributes.resumeMessage"
+        }
+      },
+      "Transitions": {
+        "NextAction": "OutcomeCheck",
+        "Errors": [
+          {
+            "NextAction": "ErrorMsg",
+            "ErrorType": "NoMatchingError"
+          }
+        ],
+        "Conditions": []
+      }
+    },
+    {
+      "Identifier": "OutcomeCheck",
+      "Type": "Compare",
+      "Parameters": {
+        "ComparisonValue": "$.Attributes.outcome"
+      },
+      "Transitions": {
+        "NextAction": "Bye",
+        "Errors": [
+          {
+            "NextAction": "Bye",
+            "ErrorType": "NoMatchingCondition"
+          }
+        ],
+        "Conditions": [
+          {
+            "NextAction": "LangCheck",
+            "Condition": {
+              "Operator": "Equals",
+              "Operands": [
+                "SwitchLanguage"
+              ]
+            }
+          },
+          {
+            "NextAction": "QueueTarget",
+            "Condition": {
+              "Operator": "Equals",
+              "Operands": [
+                "TransferAgent"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "Identifier": "QueueTarget",
+      "Type": "UpdateContactTargetQueue",
+      "Parameters": {
+        "QueueId": "${AgentQueueArn}"
+      },
+      "Transitions": {
+        "NextAction": "StaffCheck",
+        "Errors": [
+          {
+            "NextAction": "ErrorMsg",
+            "ErrorType": "NoMatchingError"
+          }
+        ],
+        "Conditions": []
+      }
+    },
+    {
+      "Identifier": "StaffCheck",
+      "Type": "CheckMetricData",
+      "Parameters": {
+        "MetricType": "NumberOfAgentsAvailable"
+      },
+      "Transitions": {
+        "NextAction": "NoAgentsCheck",
+        "Errors": [
+          {
+            "NextAction": "NoAgentsCheck",
+            "ErrorType": "NoMatchingCondition"
+          },
+          {
+            "NextAction": "NoAgentsCheck",
+            "ErrorType": "NoMatchingError"
+          }
+        ],
+        "Conditions": [
+          {
+            "NextAction": "Transfer",
+            "Condition": {
+              "Operator": "NumberGreaterThan",
+              "Operands": [
+                "0"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "Identifier": "Transfer",
+      "Type": "TransferContactToQueue",
+      "Parameters": {},
+      "Transitions": {
+        "NextAction": "NoAgentsCheck",
+        "Errors": [
+          {
+            "NextAction": "NoAgentsCheck",
+            "ErrorType": "NoMatchingError"
+          },
+          {
+            "NextAction": "NoAgentsCheck",
+            "ErrorType": "QueueAtCapacity"
+          }
+        ],
+        "Conditions": []
+      }
+    },
+    {
+      "Identifier": "NoAgentsCheck",
+      "Type": "Compare",
+      "Parameters": {
+        "ComparisonValue": "$.Attributes.language"
+      },
+      "Transitions": {
+        "NextAction": "NoAgentsEn",
+        "Errors": [
+          {
+            "NextAction": "NoAgentsEn",
+            "ErrorType": "NoMatchingCondition"
+          }
+        ],
+        "Conditions": [
+          {
+            "NextAction": "NoAgentsEs",
+            "Condition": {
+              "Operator": "Equals",
+              "Operands": [
+                "es"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "Identifier": "NoAgentsEn",
+      "Type": "MessageParticipant",
+      "Parameters": {
+        "Text": "Sorry, none of our team members is available right now. Please visit our website or call us back. Goodbye."
+      },
+      "Transitions": {
+        "NextAction": "NoAgentWrite",
+        "Errors": [
+          {
+            "NextAction": "ErrorMsg",
+            "ErrorType": "NoMatchingError"
+          }
+        ],
+        "Conditions": []
+      }
+    },
+    {
+      "Identifier": "NoAgentsEs",
+      "Type": "MessageParticipant",
+      "Parameters": {
+        "Text": "Lo sentimos, ning\u00fan miembro de nuestro equipo est\u00e1 disponible en este momento. Visite nuestro sitio web o vuelva a llamarnos. Hasta luego."
+      },
+      "Transitions": {
+        "NextAction": "NoAgentWrite",
+        "Errors": [
+          {
+            "NextAction": "ErrorMsg",
+            "ErrorType": "NoMatchingError"
+          }
+        ],
+        "Conditions": []
+      }
+    },
+    {
+      "Identifier": "NoAgentWrite",
+      "Type": "InvokeLambdaFunction",
+      "Parameters": {
+        "LambdaFunctionARN": "${WriteOutcomeArn}",
+        "InvocationTimeLimitSeconds": "8",
+        "LambdaInvocationAttributes": {
+          "customerId": "$.Attributes.customerId",
+          "disposition": "NoAgentAvailable"
+        },
+        "ResponseValidation": {
+          "ResponseType": "STRING_MAP"
+        }
+      },
+      "Transitions": {
+        "NextAction": "Bye",
+        "Errors": [
+          {
+            "NextAction": "Bye",
+            "ErrorType": "NoMatchingError"
+          }
+        ],
+        "Conditions": []
+      }
+    },
+    {
+      "Identifier": "ErrorMsg",
+      "Type": "MessageParticipant",
+      "Parameters": {
+        "Text": "Sorry, we are having technical difficulties. Goodbye."
+      },
+      "Transitions": {
+        "NextAction": "Bye",
+        "Errors": [
+          {
+            "NextAction": "ErrorMsg",
+            "ErrorType": "NoMatchingError"
+          }
+        ],
+        "Conditions": []
+      }
+    },
+    {
+      "Identifier": "Bye",
+      "Type": "DisconnectParticipant",
+      "Parameters": {},
+      "Transitions": {}
+    }
+  ]
+}

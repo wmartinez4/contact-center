@@ -1,0 +1,85 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: olive.business.connect demo - Amazon Connect instance, hours, queue, claimed number, routing profile
+
+Parameters:
+  InstanceAlias:
+    Type: String
+    Description: Globally unique Connect instance alias (lowercase letters, numbers, hyphens)
+
+Resources:
+  Instance:
+    Type: AWS::Connect::Instance
+    Properties:
+      IdentityManagementType: CONNECT_MANAGED
+      InstanceAlias: !Ref InstanceAlias
+      Attributes:
+        InboundCalls: true
+        OutboundCalls: true
+        ContactflowLogs: true
+
+  HoursAlways:
+    Type: AWS::Connect::HoursOfOperation
+    Properties:
+      InstanceArn: !GetAtt Instance.Arn
+      Name: Always
+      Description: Demo - open 24/7
+      TimeZone: America/New_York
+      Config:
+        - { Day: MONDAY, StartTime: { Hours: 0, Minutes: 0 }, EndTime: { Hours: 23, Minutes: 59 } }
+        - { Day: TUESDAY, StartTime: { Hours: 0, Minutes: 0 }, EndTime: { Hours: 23, Minutes: 59 } }
+        - { Day: WEDNESDAY, StartTime: { Hours: 0, Minutes: 0 }, EndTime: { Hours: 23, Minutes: 59 } }
+        - { Day: THURSDAY, StartTime: { Hours: 0, Minutes: 0 }, EndTime: { Hours: 23, Minutes: 59 } }
+        - { Day: FRIDAY, StartTime: { Hours: 0, Minutes: 0 }, EndTime: { Hours: 23, Minutes: 59 } }
+        - { Day: SATURDAY, StartTime: { Hours: 0, Minutes: 0 }, EndTime: { Hours: 23, Minutes: 59 } }
+        - { Day: SUNDAY, StartTime: { Hours: 0, Minutes: 0 }, EndTime: { Hours: 23, Minutes: 59 } }
+
+  OutboundNumber:
+    Type: AWS::Connect::PhoneNumber
+    Properties:
+      TargetArn: !GetAtt Instance.Arn
+      CountryCode: US
+      Type: DID
+      Description: Demo outbound caller id
+
+  AgentQueue:
+    Type: AWS::Connect::Queue
+    Properties:
+      InstanceArn: !GetAtt Instance.Arn
+      Name: AgentQueue
+      Description: Human agents for transfers from the automated call
+      HoursOfOperationArn: !GetAtt HoursAlways.HoursOfOperationArn
+      OutboundCallerConfig:
+        OutboundCallerIdName: Olive
+        OutboundCallerIdNumberArn: !Ref OutboundNumber
+
+  AgentRoutingProfile:
+    Type: AWS::Connect::RoutingProfile
+    Properties:
+      InstanceArn: !GetAtt Instance.Arn
+      Name: DemoAgents
+      Description: Demo agents - voice only, AgentQueue
+      DefaultOutboundQueueArn: !GetAtt AgentQueue.QueueArn
+      MediaConcurrencies:
+        - { Channel: VOICE, Concurrency: 1 }
+      QueueConfigs:
+        - Delay: 0
+          Priority: 1
+          QueueReference:
+            Channel: VOICE
+            QueueArn: !GetAtt AgentQueue.QueueArn
+
+Outputs:
+  InstanceId:
+    Value: !GetAtt Instance.Id
+  InstanceArn:
+    Value: !GetAtt Instance.Arn
+  InstanceAccessUrl:
+    Value: !Sub https://${InstanceAlias}.my.connect.aws
+  QueueArn:
+    Value: !GetAtt AgentQueue.QueueArn
+  QueueId:
+    Value: !Select [1, !Split ['/queue/', !GetAtt AgentQueue.QueueArn]]
+  RoutingProfileArn:
+    Value: !GetAtt AgentRoutingProfile.RoutingProfileArn
+  OutboundNumber:
+    Value: !GetAtt OutboundNumber.Address

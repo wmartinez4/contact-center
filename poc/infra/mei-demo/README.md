@@ -1,0 +1,73 @@
+# Contact-center demo on Amazon Connect: setup scripts (Part A)
+
+Re-runnable and additive. Everything created is prefixed with `DEMO_PREFIX` (default `demo`). Nothing is deleted.
+
+The first sandbox was built with `DEMO_PREFIX=mei`: always pass that value there, or the script creates a second set of resources.
+
+## What it creates
+
+- S3 bucket `amazon-connect-mei-recordings-<account>` and CALL_RECORDINGS storage on the instance
+- 9 queues (8 routing + `Q-CallerOnly`), routing profiles `front-line`, `specialist`, `caller`
+- Users `mei.agent1` (front line), `mei.agent2` (specialist: Redemptions, EPD) and `mei.caller` (dials the instance's own number from the browser)
+- Quick connects to Redemptions, EPD and 9-15
+- Lambda `mei-lookup` (simulated iDMS and routing rules, special status before delinquency)
+- Flow `mei-inbound`, attached to every number claimed on the instance
+
+Generated passwords go to `poc/.credentials.local` (not printed, not for version control).
+
+## Run it on this sandbox
+
+```bash
+AWS_PROFILE=connect-demo EXPECTED_ACCOUNT=200845568816 python3 setup_part_a.py
+```
+
+## Run it on another account (portable)
+
+1. Create a Connect instance (the alias cannot be renamed later, so choose it carefully) with inbound and outbound calls enabled.
+2. Claim a number (a US number needs nothing special). Outbound calls to **Colombia are not allowed by default**: that needs an AWS support request per instance. US destinations work without it.
+3. Install boto3, then:
+
+```bash
+AWS_PROFILE=<profile> AWS_REGION=<region> CONNECT_INSTANCE_ID=<id> EXPECTED_ACCOUNT=<account> python3 setup_part_a.py
+```
+
+The bucket call assumes `us-east-1`; in another region add a `CreateBucketConfiguration` in `setup_recordings()`.
+
+## Test without a phone
+
+Log in as `mei.caller` in one browser, `mei.agent1` in a second and `mei.agent2` in a third (use headphones to avoid echo). From the caller's softphone dial the instance's number, press 1 for English and then a case 1 to 7. Afterwards: `python3 chain.py --hours 2`.
+
+## Known limits
+
+- Claiming a second number (a Colombian one) failed with "allowed limit for claimed phone numbers exceeded for your instance", although the quota shows 10. Cause not diagnosed.
+- The language menu reads English and Spanish with one voice.
+- `master_call_id` propagation across transfers is not yet verified in practice.
+
+## Customer Profiles and sandbox line (2026-11-10)
+- `setup_profiles.py`: creates KMS alias `alias/demo-profiles-key`, domain `amazon-connect-cs-connect-demo` (associated with the instance; Connect's role only reaches `amazon-connect-*` domains, so the first domain `demo-profiles` is unused) and loads `poc/data/customers.csv` (8 customers; account 9 (Ordonez) uses a real demo phone with simulated account data; account 8 (Cuevas) has the placeholder phone +10000000008 since 2026-11-10 so his real number reaches the menu (his old number was +16173653176; put it back in customers.csv and personas.json, then re-run setup_profiles.py and update the demo-lookup Lambda code to make it a known caller again)). Re-runnable.
+- `flow_layout.py`: adds block positions so API-built flows are readable in the designer. `--copy-to` makes a sandbox copy; `--in-place` rewrites the layout only. Re-run it after any setup script republishes a flow.
+- Sandbox: flow `CS - Sandbox - Copy of Collections Routing` (copy of `CS - Inbound - Collections Routing`, same Lambda and queues) on +1 775 249 1708, for live edits without touching the demo.
+- Security profile `Agent` now includes `CustomerProfiles.View`. User `demo.admin` (Admin profile); password in `poc/.credentials.local`.
+- `CS - Inbound - Collections Routing` now looks up the caller's number first (`lookup_handler.by_phone`, personas with a `phone`): known callers get the notice and a personal greeting in their language and skip both menus. Both paths set `profileSearchKey=_account` so the agent workspace opens the customer profile.
+- Contact Lens post-call analytics (transcript, summary, categories) on both inbound flows; **sentiment analysis was turned off on 2026-11-10** (`SentimentConfiguration.Enabled = False` in `setup_part_a.lens()` and in the three flows that had it); generative summary in English only (`SUMMARY_ES=1` turns it on for Spanish once tested). Flows are laid out by `flow_layout.layout` when built.
+- `setup_sandbox_flow.py`: flow `CS - Sandbox - Simple Flow` (greeting, two options, transfer to Q-Current) on the sandbox number. `setup_part_a.py` leaves numbers described "demo sandbox…" or "demo ai…" on their own flows.
+- `CallCenterManager` has recording, transcript and post-contact summary permissions (unredacted) since 2026-11-10.
+- `setup_workspaces.py`: workspaces `demo-agents` (land on the agent workspace) and `demo-supervisors` (welcome cards), replacing Connect's default home page. Purple theme, title "Committed Staff · Contact Center" and, with `LOGO_PATH=poc/assets/logo-white.png (PNG renders at a better size than the SVG)`, the header logo.
+- Visible names carry no prefix since 2026-11-10 (`names.py`): queues ("Collections - 16 to 30 days", "Redemptions", ...), routing profiles, quick connects ("Transfer to ..."), hours and flows ("CS - Inbound - Collections Routing", ...). Scripts find resources by the display name or the old `demo-` name and rename the old ones. Usernames (`demo.*`), Lambdas, the Lex bot, prompts and buckets keep the prefix (usernames cannot be renamed). Menu prompts now say "Thank you for calling" and ask for the account number.
+- Since 2026-11-10 every display name starts with `CS - ` (`names.py` `DISPLAY_PREFIX`) so the demo resources stand apart from the AWS samples in Routing.
+- `setup_caller2.py`: user `demo.caller2` (routing profile and outbound-only queue "CS - Test Caller 2") whose calls show the sandbox line (+1 775 249 1708) as caller ID. That number is customer account 10 (rehearsal persona, simulated data), so caller2 tests the known-caller path: Spanish greeting by name, no menus, Redemptions → agent 2.
+- `setup_guide_flow.py`: flow "CS - Guide - Transfer Reason" (Show view, detail view). The AI flow sets it as the "Default flow for agent UI" before transferring, so the agent who answers sees "Transferred by the AI assistant" with reason, summary (customer, days past due, balance, due date), account, language and queue. Agents need the security profile permission `CustomViews.Access` (Agent Applications - Custom views) to see it.
+- AI agent language switch (bot version 4): intent `SwitchLanguage` in both locales ("Spanish please", "en español" / "en inglés", "English please"). The Lambda closes with `outcome=switch_language`, and the AI flow reconnects the caller to the bot in the other locale and voice, keeping the account code. If the voice bot block ends in "Error", the flow trusts the outcome left in the Lex session, and with none it transfers to General Assistance instead of hanging up.
+- Agent-to-agent transfers: `setup_transfer_flow.py` creates "CS - Queue Transfer - With Context" (Connect's default queue transfer plus a "Default flow for agent UI" hook) and points the `CS - Transfer to …` quick connects at it. The receiving agent sees "CS - Guide - Agent Transfer": the customer summary (`customerSummary` from the lookup), where the call came from (`queueLabel`), account, special status and language. Both guides live in `setup_guide_flow.py`.
+- `twilio_test_calls.py routing|ai|all [case …]`: scripted test calls from the Twilio number in the project .env (credentials never printed); reads back queue, agent, attributes and summary of each Connect contact. Agents answer automatically when Available (auto-accept, 10 s after-call work). Last full run 2026-11-10: 8/8 OK, all answered, a guide panel opened on every call.
+- Disposition (wrap-up): `setup_wrapup.py` creates the view "CS - Collections Wrap-up" (from Connect's After Contact Work view: disposition, follow-up, resolved, editable call summary, date and notes) and the flow "CS - Guide - Wrap-up". All inbound, AI and transfer flows set it as the "Disconnect flow for agent UI", so the agent fills it during after-call work (60 s) and the answers are written onto the call as attributes `disposition`, `followUp`, `resolved`, `wrapUpSummary`, `wrapUpNotes`.
+  Verified end to end 2026-11-10 (agent pressed Submit; all five attributes on the voice contact). Three things were needed: the `ShowView` block must have a condition for the `Submit` branch (otherwise it falls to `NoMatchingCondition`); in a custom view the fields are read at `$.Views.ViewResultData.<Name>` (no `FormData`, which is only for the AWS-managed Form view); and a Dropdown returns an array, so it is read with `.0` (`...Disposition.0`). Dropdowns also keep `DefaultValue: [""]` as in Connect's original view.
+- Contact Lens categories: `setup_categories.py` (post-call rules, EN/ES phrases): Promise_to_pay, Payment_arrangement, Financial_hardship, Dispute, Callback_requested (customer side) and Collection_notice_given (agent side). Verified on simulated-agent calls on 2026-11-10. `agent_sim.py` + `twilio_test_calls.py full|categories` run unattended two-sided test calls.
+- Queue callback offer (2026-11-10): the customer queue flows "CS - Queue - Callback Offer (English/Spanish)" (copies of Connect's sample "interruptible queue flow with callback") offer the callback after **10 s** of waiting, then every 10 s (`InterruptFrequencySeconds`, was 30). Edited in place with the API; not created by any setup script. The offer plays only when no agent is available (for example with the agents Offline).
+- Customer profile for menu callers (2026-11-11): the agent workspace finds the profile only by the caller's phone. `profileSearchKey` / `profileSearchValue` do not work in this instance (the workspace receives them as objects: "Cannot search for customer identifier: [object Object]" and an empty search box), so they are not used. Instead, when a caller from an unregistered number picks an account in the menu, `lookup_handler.link_phone` (called by the `Lookup` block with `callerPhone = $.CustomerEndpoint.Address`) stores that number as the `MobilePhoneNumber` of the profile of the chosen account and clears it from any other profile, so the default phone search finds it, for the first agent and for the one who receives a transfer. The Lambda role `demo-lambda-role` has the inline policy `profiles-link` (SearchProfiles, UpdateProfile on the domain and the KMS key) and the env var `PROFILES_DOMAIN`. Best effort: a failure never affects the routing. The AI line does not do this yet. To clean the linked numbers: `update-profile --mobile-phone-number ""` on each profile.
+- AI line without preamble (2026-11-11): the flow "CS - Inbound - AI Agent" no longer has the language menu. It plays only "This call may be recorded.", looks the caller up by number (`demo-lookup`, `phone`), and the Lex bot opens with `$.Attributes.aiGreeting`: for a recognized caller the Lambda returns `aiGreeting` ("Hi Mauricio, thanks for calling. How can I help you today?", in their language) and the account is already known; otherwise "Thank you for calling. How can I help you today?" in English and the bot asks for the account code when it needs it. Language can still be switched by voice ("Spanish please"; after a switch the greeting is only "Sure. How can I help you?" / "Claro. ¿En qué puedo ayudarle?"). Patched live; `setup_ai_flow.py` was updated to match but NOT re-run, because running it also re-runs `ensure_queue_flows`, which would put the callback offer back at 30 s.
+- Language switch on the AI line (2026-11-11): `ai_dialog.py` no longer says "Of course. Un momento, por favor." when the caller asks for the other language (it was followed by the flow's "Claro. ¿En qué puedo ayudarle?" / "Sure. How can I help you?", so the caller heard two confirmations, the first in the old voice). `_close` omits `messages` when there is no text; the new voice is the only one that speaks. Deployed to `demo-ai-dialog` by code update only. Verified with a scripted call: "spanish please" produced no message and the Spanish conversation continued.
+- Generic transfer announcement (2026-11-11): after the account is identified the caller hears "Account found. Transferring you to the collections area." / "Cuenta encontrada. Lo comunico con el área de cobranza." (not found: "We could not find the account. Transferring you to an agent." / "No encontramos la cuenta. Lo comunico con un agente.") instead of the queue name. The Lambda returns that text and the routing flow's `SetAttrs` goes straight to `AnnounceText` (read by the voice of the language), so the per-queue recorded prompts `ann_*` are no longer played. Known callers keep their greeting ("... Let me connect you with a collections agent.").
+- Generic announcement audio (2026-11-11): `prompts_spec.py` has `ann_generic_*` and `ann_notfound_*` (same ElevenLabs voice as the other prompts, built with `build_prompts.py`). The `demo-lookup` Lambda returns their ARN in `announcePromptArn` (env `PROMPT_IDS` has the four ids) and the routing flow's `Announce` block plays it; `AnnounceText` (generic text, Polly voice) is only the fallback. The per-queue `ann_Q-*` prompts still exist but are no longer played. This replaces the previous note about the text-only announcement.
+- AI bot knows the account of a recognized caller (2026-11-11): the slot `accountCode` of the intent `AccountInfo` (en_US and es_US) stays Required but now has the default value `[accountCode]` (session attribute passed by the flow), so Lex does not ask for the code when the caller was recognized by number; anyone else is asked as before. Making the slot Optional does not build (the intent has next steps on it). `ai_dialog.py` also answers with the known account if the slot arrives empty. Bot version 5 is the alias `live` (alias settings and conversation logs kept); to go back: `update-bot-alias` to version 4. Verified for an unknown number with a scripted call; the recognized-number path needs a call from a registered phone.
+- AI bot, "what is my account": the `AccountInfo` answer starts with the account number ("Willian, su número de cuenta es el 10. Su saldo es ... Su pago venció el ...") instead of "Gracias, Willian." (2026-11-11).

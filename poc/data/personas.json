@@ -1,0 +1,147 @@
+{
+  "_note": "Datos 100% inventados para la PoC. Ningún dato real de MEI. Los tramos de mora y los estatus salen del pedido de MEI; OFR/Skip queda reservado hasta aclarar su significado.",
+  "selection": "El tester elige el caso tecleando su codigo (DTMF) al inicio de la llamada. Con un solo telefono se pueden probar todos los casos.",
+  "queues": [
+    "Q-Current",
+    "Q-1-8",
+    "Q-9-15",
+    "Q-16-30",
+    "Q-31Plus",
+    "Q-Redemptions",
+    "Q-EPD",
+    "Q-OFR-Skip",
+    "Q-Fallback"
+  ],
+  "personas": [
+    {
+      "code": "1",
+      "id": "P-001",
+      "name": "Michael Johnson",
+      "language": "en",
+      "daysPastDue": 0,
+      "specialStatus": null,
+      "balance": 412.5,
+      "paymentDue": "2026-11-20",
+      "expectedQueue": "Q-Current",
+      "tests": "Ruta base y consulta de saldo"
+    },
+    {
+      "code": "2",
+      "id": "P-002",
+      "name": "Maria Hernandez",
+      "language": "es",
+      "daysPastDue": 5,
+      "specialStatus": null,
+      "balance": 1180.0,
+      "paymentDue": "2026-11-04",
+      "expectedQueue": "Q-1-8",
+      "tests": "Cola por mora y por idioma (espanol)"
+    },
+    {
+      "code": "3",
+      "id": "P-003",
+      "name": "Robert Miller",
+      "language": "en",
+      "daysPastDue": 22,
+      "specialStatus": null,
+      "balance": 2640.75,
+      "paymentDue": "2026-10-18",
+      "expectedQueue": "Q-16-30",
+      "tests": "Otro tramo de mora"
+    },
+    {
+      "code": "4",
+      "id": "P-004",
+      "name": "Luisa Ramirez",
+      "language": "es",
+      "daysPastDue": 47,
+      "specialStatus": null,
+      "balance": 5210.3,
+      "paymentDue": "2026-09-23",
+      "expectedQueue": "Q-31Plus",
+      "tests": "Tramo mas alto, espanol"
+    },
+    {
+      "code": "5",
+      "id": "P-005",
+      "name": "David Thompson",
+      "language": "en",
+      "daysPastDue": 12,
+      "specialStatus": "Redemptions",
+      "balance": 7890.0,
+      "paymentDue": "2026-10-28",
+      "expectedQueue": "Q-Redemptions",
+      "tests": "El estatus especial gana a la mora (12 dias iria a Q-9-15 sin el estatus)"
+    },
+    {
+      "code": "6",
+      "id": "P-006",
+      "name": "Sofia Castillo",
+      "language": "es",
+      "daysPastDue": 3,
+      "specialStatus": "EPD",
+      "balance": 980.0,
+      "paymentDue": "2026-11-06",
+      "expectedQueue": "Q-EPD",
+      "tests": "Segundo estatus especial (pago temprano fallido), espanol"
+    },
+    {
+      "code": "7",
+      "id": "P-007",
+      "name": null,
+      "language": "en",
+      "daysPastDue": null,
+      "specialStatus": null,
+      "balance": null,
+      "paymentDue": null,
+      "expectedQueue": "Q-Fallback",
+      "tests": "Cuenta no encontrada: el servicio responde 'no existe' y el flujo va a la cola general"
+    },
+    {
+      "code": "8",
+      "id": "P-008",
+      "name": "Mauricio Cuevas",
+      "phone": "+10000000008",
+      "language": "es",
+      "daysPastDue": 18,
+      "specialStatus": null,
+      "balance": 3125.4,
+      "paymentDue": "2026-10-23",
+      "expectedQueue": "Q-16-30",
+      "tests": "Identified by caller phone (real demo number, simulated account): no case menu, personal greeting in Spanish"
+    },
+    {
+      "code": "9",
+      "id": "P-009",
+      "name": "Mauricio Ordonez",
+      "phone": "+16787079207",
+      "language": "en",
+      "daysPastDue": 10,
+      "specialStatus": null,
+      "balance": 1460.0,
+      "paymentDue": "2026-10-31",
+      "expectedQueue": "Q-9-15",
+      "tests": "Identified by caller phone (real demo number, simulated account): no case menu, personal greeting in English"
+    },
+    {
+      "code": "10",
+      "id": "P-010",
+      "name": "Willian Martinez",
+      "phone": "+17752491708",
+      "language": "es",
+      "daysPastDue": 12,
+      "specialStatus": "Redemptions",
+      "balance": 6240.0,
+      "paymentDue": "2026-10-29",
+      "expectedQueue": "Q-Redemptions",
+      "tests": "Known caller for rehearsals: demo.caller2 calls with the sandbox line as caller ID; personal greeting in Spanish, special status routes to agent 2"
+    }
+  ],
+  "reserved": [
+    {
+      "status": "OFR/Skip",
+      "queue": "Q-OFR-Skip",
+      "pending": "Aclarar con MEI que significa OFR y que reglas de ruteo tiene antes de crear casos de prueba"
+    }
+  ]
+}
