@@ -29,7 +29,6 @@ BUCKET = f"voice-agent-artifacts-{EXPECTED_ACCOUNT}"
 TAGS = {"project": "elevenlabs"}
 # Route B test phones -> demo account. The caller3 softphone (number claimed by setup_caller3.py) acts as
 # Maria Hernandez (account 2). Change the account to test another customer; caller2 stays Willian (Redemptions).
-TEST_CALLERS = {"+17752585298": "2"}
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 API_SRC = os.path.abspath(os.path.join(HERE, "..", "..", "elevenlabs-ruta-b", "api"))
@@ -134,7 +133,7 @@ def code_zip():
 def ensure_lambda(role_arn, secret_arn):
     env = {"Variables": {"PROFILES_DOMAIN": PROFILES_DOMAIN, "CONNECT_INSTANCE_ID": INSTANCE_ID,
                          "CALLS_TABLE": CALLS_TABLE, "AGREEMENTS_TABLE": AGREEMENTS_TABLE, "API_SECRET_ARN": secret_arn,
-                         "TEST_CALLERS": json.dumps(TEST_CALLERS), "ARTIFACTS_BUCKET": BUCKET,
+                         "ARTIFACTS_BUCKET": BUCKET,
                          "WEBHOOK_SECRET_ARN": WEBHOOK_SECRET_NAME, "POST_CALL_TOKEN_SECRET": POST_CALL_TOKEN_NAME}}
     try:
         lam.get_function(FunctionName=NAME)

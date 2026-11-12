@@ -23,9 +23,9 @@ APP_NAME = "Call with AI"
 NAMESPACE = "ai-call-launcher"
 FLOW_NAME = "ElevenLabs Transfer"
 CALLER_ID = "+17752550671"
-# Sandbox line (rings demo.caller2 after customer_line.py ring) and the real phone of account 9 (Mauricio Ordonez),
-# who takes part in the demo.
-TEST_DESTINATIONS = ["+17752491708", "+16787079207"]
+# Account 10 (sandbox line, rings demo.caller2), account 2 (caller3's line, rings demo.caller3), both after
+# customer_line.py ring, and the real phone of account 9 (Mauricio Ordonez), who takes part in the demo.
+TEST_DESTINATIONS = ["+17752491708", "+17752585298", "+16787079207"]
 SECURITY_PROFILES = ("CallCenterManager", "Admin")
 CODE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "ai-call-launcher"))
 

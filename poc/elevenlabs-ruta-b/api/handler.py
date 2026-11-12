@@ -39,7 +39,6 @@ LOCAL_TZ = ZoneInfo("America/Chicago")
 PENDING_SECONDS = 300
 # Route B only: test phones that should act as a given demo account (e.g. the caller2 softphone as Maria),
 # without changing the profiles the main Connect demo relies on.
-TEST_CALLERS = json.loads(os.environ.get("TEST_CALLERS", "{}"))
 _api_secret = None
 
 FIRST_MESSAGE = {
@@ -68,8 +67,8 @@ def _connect(event):
     if action == "identify":
         phone = contact.get("CustomerEndpoint", {}).get("Address")
         # An account typed on the keypad (callers the flow did not recognize) wins over the phone number.
-        test_account = (params.get("accountInput") or "").strip() or TEST_CALLERS.get(phone)
-        customer, _ = (find_by_account(PROFILES, DOMAIN, test_account) if test_account
+        typed_account = (params.get("accountInput") or "").strip()
+        customer, _ = (find_by_account(PROFILES, DOMAIN, typed_account) if typed_account
                        else find_by_phone(PROFILES, DOMAIN, phone))
         if not customer:
             return {"found": "false", "queueArn": _queue_arn("Q-Fallback")}

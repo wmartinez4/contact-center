@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Test caller 3: a softphone user whose outbound calls show their own claimed number, used to test the
-ElevenLabs agent (route B). setup_api.py maps that number to a demo account in TEST_CALLERS.
+ElevenLabs agent (route B). That number is the phone of customer account 2 (Maria Hernandez) in Customer Profiles.
 
 Same pattern as poc/infra/mei-demo/setup_caller2.py. Re-runnable; claims the number only once and writes
 the new user's password to poc/.credentials.local (git-ignored). Prints the number.
