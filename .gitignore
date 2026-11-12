@@ -9,3 +9,4 @@ poc/.credentials.old.local
 poc/.ai_bot.json
 poc/elevenlabs-ruta-b/.state.json
 poc/call-tester/.state.json
+.claude/settings.local.json

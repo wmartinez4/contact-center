@@ -37,6 +37,7 @@ Notas:
 - **Cuenta 10 (Willian):** desde el 2026-11-12 tiene 12 días de mora en la cola "Collections - 9 to 15 days", sin estatus especial (antes era Redemptions), para que la IA pueda negociar en las pruebas salientes.
 - **Cuenta 2 (María):** desde el 2026-11-12 su teléfono es la línea de `demo.caller3` (+1 775 258 5298), así que todas las líneas la reconocen cuando llama caller3, y esa línea timbra en caller3 para las salientes. Reemplaza el mapeo fijo `TEST_CALLERS` que tenía la API de la ruta B.
 - **Probador:** el primer escenario (`maria-installments`, ruta B desde el número de caller3) pasó el 2026-11-12. Límites: no marca teclas (los menús de la línea principal se prueban con `infra/mei-demo/twilio_test_calls.py`), a veces responde a media frase, y cada `setup.py` crea una versión nueva del bot. Cada corrida guarda un acuerdo real en la tabla de pruebas.
+- **Transcripción en Connect (2026-11-12):** el flujo "ElevenLabs Transfer" activa Contact Lens después de identificar al cliente (idioma del cliente; resumen generativo solo en inglés). Contact Lens transcribe la grabación completa: Sofía aparece como *System* y el cliente como *Customer*. La copia de ElevenLabs sigue en S3.
 - **Pendiente:** envío real de correo o SMS de confirmación; que Sofía distinga si la llamada es entrante o saliente (en una entrante dijo "te llamo porque…"); revisión legal antes de llamar a clientes reales con IA.
 
 ## De dónde viene

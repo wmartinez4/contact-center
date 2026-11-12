@@ -74,7 +74,19 @@ act("Remember", "UpdateContactAttributes", {"Attributes": {
     "aiAgent": "elevenlabs", "customerFound": "$.External.found", "account": "$.External.account",
     "customerName": "$.External.customerName", "language": "$.External.language",
     "canNegotiate": "$.External.canNegotiate", "queueArn": "$.External.queueArn"}, "TargetContact": "Current"},
-    "IsSpecial", [(NM, "Prepare")])
+    "LensLang", [(NM, "LensLang")])
+# Contact Lens post-call analytics, so Connect shows the transcript of the conversation with Sofia on the contact.
+# The analytics language follows the customer's language (English when unknown); the generative summary is English only,
+# as on the other flows. "AutomatedInteraction" covers the part with no Connect agent.
+act("LensLang", "Compare", {"ComparisonValue": "$.Attributes.language"}, "LensEn", [(NC, "LensEn")], [("es", "LensEs")])
+for code, lang in (("Es", "es-US"), ("En", "en-US")):
+    analytics = {"Enabled": "True", "AnalyticsLanguage": lang, "AnalyticsModes": ["PostContact", "AutomatedInteraction"],
+                 "SentimentConfiguration": {"Enabled": "False"}}
+    if code == "En":
+        analytics["SummaryConfiguration"] = {"SummaryModes": ["PostContact", "AutomatedInteraction"]}
+    act(f"Lens{code}", "UpdateContactRecordingAndAnalyticsBehavior", {"VoiceBehavior": {
+        "VoiceRecordingBehavior": {"RecordedParticipants": ["Agent", "Customer"], "IVRRecordingBehavior": "Enabled"},
+        "VoiceAnalyticsBehavior": analytics}}, "IsSpecial", [(NM, "IsSpecial"), ("ChannelMismatch", "IsSpecial")])
 # Only a known customer that cannot negotiate skips the AI; unknown callers go to the agent, which asks the account.
 act("IsSpecial", "Compare", {"ComparisonValue": "$.Attributes.canNegotiate"}, "Prepare", [(NC, "Prepare")],
     [("false", "SpecialMsg")])
