@@ -22,6 +22,8 @@
   .why { color: var(--muted); font-size: 12px; }
   #status { margin-top: 16px; padding: 12px; border-radius: 8px; background: var(--soft); display: none; }
   .ok { color: var(--ok); } .warn { color: var(--warn); } .err { color: var(--err); }
+  h2 { font-size: 14px; margin: 20px 0 6px; }
+  #log td.when { color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body>
@@ -33,6 +35,10 @@
   <tbody></tbody>
 </table>
 <div id="status"></div>
+<div id="history" hidden>
+  <h2>Recent AI calls</h2>
+  <table id="log"><thead><tr><th>When</th><th>Customer</th><th>Result</th><th>Started by</th></tr></thead><tbody></tbody></table>
+</div>
 <script type="module">
 import { AmazonConnectApp } from "https://cdn.jsdelivr.net/npm/@amazon-connect/app@1.0.14/+esm";
 import { AgentClient } from "https://cdn.jsdelivr.net/npm/@amazon-connect/contact@1.0.14/+esm";
@@ -89,11 +95,12 @@ async function call(customer, button) {
   delete button.dataset.armed;
   button.textContent = "Call with AI";
   document.querySelectorAll("button").forEach(b => b.disabled = true);
-  show(`Calling ${customer.name}…`);
+  const who = `${customer.name} (account ${customer.account})`;
+  show(`Calling ${who}…`);
   try {
     const { contactId } = await api("/call", { method: "POST", headers: { "Content-Type": "application/json" },
                                                body: JSON.stringify({ account: customer.account, agent: agentArn }) });
-    poll(contactId, customer.name);
+    poll(contactId, who);
   } catch (e) {
     show(e.message, "err");
     document.querySelectorAll("button").forEach(b => b.disabled = false);
@@ -106,24 +113,53 @@ function show(text, cls = "") {
   statusBox.className = cls;
 }
 
-async function poll(contactId, name) {
+// Latest outbound AI calls, newest first, from the calls table (so they survive reloads).
+function result(call) {
+  if (call.outcome === "agreement") return [`Agreement saved: ${call.summary}`, "ok"];
+  if (call.outcome === "escalate") return [`Asked for a person. ${call.summary || ""}`.trim(), "warn"];
+  return ["No agreement", "warn"];
+}
+
+async function loadHistory() {
+  const { calls } = await api(`/history?agent=${encodeURIComponent(agentArn)}`);
+  const tbody = document.querySelector("#log tbody");
+  tbody.textContent = "";
+  for (const call of calls) {
+    const when = new Date(call.startedAt * 1000).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+    const [text, cls] = result(call);
+    const who = call.customer ? `${call.customer} (account ${call.account})` : `Account ${call.account || "?"}`;
+    const tr = tbody.appendChild(document.createElement("tr"));
+    for (const [value, c] of [[when, "when"], [who, ""], [text, cls], [call.startedBy, "why"]]) {
+      const td = tr.appendChild(document.createElement("td"));
+      td.textContent = value;
+      if (c) td.className = c;
+    }
+  }
+  document.getElementById("history").hidden = calls.length === 0;
+}
+
+async function poll(contactId, who) {
   const s = await api(`/status?contact=${contactId}&agent=${encodeURIComponent(agentArn)}`);
-  if (s.state === "dialing") show(`Dialing ${name}…`);
-  if (s.state === "in_call") show(`On the call with ${name}.` + (s.agreement ? ` Agreement: ${s.agreement}` : ""));
+  if (s.state === "dialing") show(`Dialing ${who}…`);
+  if (s.state === "in_call") show(`On the call with ${who}.` + (s.agreement ? ` Agreement: ${s.agreement}` : ""));
   if (s.state === "ended") {
-    if (s.outcome === "agreement") show(`Agreement saved: ${s.agreement}`, "ok");
-    else if (s.outcome === "escalate") show(`The customer asked for a person. ${s.handoff}`, "warn");
-    else show("The call ended without an agreement.", "warn");
+    let text = "Ended without an agreement.", cls = "warn";
+    if (s.outcome === "agreement") [text, cls] = [`Agreement saved: ${s.agreement}`, "ok"];
+    else if (s.outcome === "escalate") [text, cls] = [`Asked for a person. ${s.handoff}`.trim(), "warn"];
+    show(`${who}: ${text}`, cls);
+    // The post-call webhook writes the outcome a few seconds after the call ends.
+    setTimeout(() => loadHistory().catch(() => {}), 5000);
     document.querySelectorAll("button").forEach(b => b.disabled = false);
     return;
   }
-  setTimeout(() => poll(contactId, name), 4000);
+  setTimeout(() => poll(contactId, who), 4000);
 }
 
 try {
   AmazonConnectApp.init({ onCreate: () => {}, onDestroy: () => {} });
   agentArn = await new AgentClient().getARN();
   render((await api(`/customers?agent=${encodeURIComponent(agentArn)}`)).customers);
+  loadHistory().catch(() => {});
 } catch (e) {
   msg.className = "err";
   msg.textContent = e.message || "Open this app from the Amazon Connect agent workspace.";

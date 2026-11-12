@@ -6,6 +6,7 @@ Served by a Lambda function URL:
   GET  /customers?agent=  the customers and whether each one can be called
   POST /call              {"account", "agent"} starts the call
   GET  /status?contact=   the call's progress and outcome
+  GET  /history?agent=    the latest outbound AI calls (from the route B calls table)
 
 Demo-grade access check: the page sends the user's ARN from the workspace SDK and the call is only placed when that
 user has a supervisor or admin security profile and is logged in. The ARN is not signed, so production needs real
@@ -23,11 +24,13 @@ FLOW_ID = os.environ["FLOW_ID"]
 CALLER_ID = os.environ["CALLER_ID"]
 ALLOWED_PROFILES = set(json.loads(os.environ["ALLOWED_SECURITY_PROFILES"]))
 MAX_ACCOUNT = 15
+HISTORY_SIZE = 20
 FICTIONAL = re.compile(r"^\+1\d{3}55501\d{2}$")  # 555-01xx numbers do not exist
 # Only these numbers may be dialed: some demo profiles carry real people's phones.
 TEST_DESTINATIONS = set(json.loads(os.environ.get("TEST_DESTINATIONS", "[]")))
 
 connect = boto3.client("connect")
+calls = boto3.resource("dynamodb").Table(os.environ["CALLS_TABLE"])
 profiles = boto3.client("customer-profiles")
 PAGE = open(os.path.join(os.path.dirname(__file__), "page.html"), encoding="utf-8").read()
 
@@ -100,6 +103,31 @@ def _status(contact_id):
                        "summary": attrs.get("aiCallSummary", ""), "handoff": attrs.get("handoffSummary", "")})
 
 
+def _history():
+    """Latest outbound calls handled by Sofia, newest first. The calls table is small in the sandbox, so a scan is fine;
+    production would query an index by direction and date."""
+    items, kwargs = [], {"FilterExpression": "#d = :o", "ExpressionAttributeNames": {"#d": "direction"},
+                     "ExpressionAttributeValues": {":o": "outbound"}}
+    while True:
+        page = calls.scan(**kwargs)
+        items += page["Items"]
+        if "LastEvaluatedKey" not in page:
+            break
+        kwargs["ExclusiveStartKey"] = page["LastEvaluatedKey"]
+    items = sorted(items, key=lambda i: int(i.get("createdAt", 0)), reverse=True)[:HISTORY_SIZE]
+    names = {c["account"]: c["name"] for c in _customers()}
+    out = []
+    for i in items:
+        try:
+            attrs = connect.get_contact_attributes(InstanceId=IID, InitialContactId=i["contactId"])["Attributes"]
+        except connect.exceptions.ResourceNotFoundException:
+            attrs = {}
+        out.append({"contactId": i["contactId"], "startedAt": int(i.get("createdAt", 0)), "account": i.get("account", ""),
+                    "customer": names.get(i.get("account", ""), ""), "outcome": i.get("outcome", ""),
+                    "summary": i.get("summary", ""), "startedBy": attrs.get("requestedBy") or attrs.get("campaign") or ""})
+    return out
+
+
 def handler(event, _context):
     method = event["requestContext"]["http"]["method"]
     path = event.get("rawPath", "/")
@@ -112,6 +140,10 @@ def handler(event, _context):
         return _json(200, {"customers": _customers()})
     if method == "POST" and path == "/call":
         return _call(json.loads(event.get("body") or "{}"))
+    if method == "GET" and path == "/history":
+        if not _supervisor(query.get("agent")):
+            return _json(403, {"error": "Only available to logged-in supervisors."})
+        return _json(200, {"calls": _history()})
     if method == "GET" and path == "/status" and query.get("contact"):
         if not _supervisor(query.get("agent")):
             return _json(403, {"error": "Only available to logged-in supervisors."})

@@ -23,6 +23,7 @@ APP_NAME = "Call with AI"
 NAMESPACE = "ai-call-launcher"
 FLOW_NAME = "CS - Inbound - Sofia AI"
 CALLER_ID = "+17752550671"
+CALLS_TABLE = "voice-calls"  # route B hand-off records (poc/infra/elevenlabs-route-b/setup_api.py)
 # Account 10 (sandbox line, rings demo.caller2), account 2 (caller3's line, rings demo.caller3), both after
 # customer_line.py ring, and the real phone of account 9 (Mauricio Ordonez), who takes part in the demo.
 TEST_DESTINATIONS = ["+17752491708", "+17752585298", "+16787079207"]
@@ -51,6 +52,7 @@ def ensure_role():
         {"Effect": "Allow", "Action": ["connect:StartOutboundVoiceContact", "connect:DescribeContact", "connect:GetContactAttributes",
                                        "connect:DescribeUser", "connect:GetCurrentUserData"],
          "Resource": [INSTANCE_ARN, f"{INSTANCE_ARN}/*"]},
+        {"Effect": "Allow", "Action": ["dynamodb:Scan"], "Resource": f"arn:aws:dynamodb:{REGION}:{ACCOUNT}:table/{CALLS_TABLE}"},
         {"Effect": "Allow", "Action": ["profile:SearchProfiles"], "Resource": f"arn:aws:profile:{REGION}:{ACCOUNT}:domains/{DOMAIN}*"},
         {"Effect": "Allow", "Action": ["kms:Decrypt", "kms:GenerateDataKey"], "Resource": key_arn,
          "Condition": {"StringEquals": {"kms:ViaService": f"profile.{REGION}.amazonaws.com"}}},
@@ -64,7 +66,7 @@ def ensure_lambda(role_arn):
     sp = {p["Name"]: p["Id"] for p in connect.list_security_profiles(InstanceId=IID)["SecurityProfileSummaryList"]}
     env = {"Variables": {"CONNECT_INSTANCE_ID": IID, "PROFILES_DOMAIN": DOMAIN, "FLOW_ID": flow_id, "CALLER_ID": CALLER_ID,
                          "ALLOWED_SECURITY_PROFILES": json.dumps([sp[n] for n in SECURITY_PROFILES]),
-                         "TEST_DESTINATIONS": json.dumps(TEST_DESTINATIONS)}}
+                         "TEST_DESTINATIONS": json.dumps(TEST_DESTINATIONS), "CALLS_TABLE": CALLS_TABLE}}
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
         for f in ("app.py", "page.html"):
