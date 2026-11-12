@@ -75,5 +75,5 @@ Log in as `mei.caller` in one browser, `mei.agent1` in a second and `mei.agent2`
 ## Outbound tests and supervisor app (2026-11-12)
 - Account 10 (Willian) moved from Redemptions to 12 days past due, queue `Q-9-15` ("Collections - 9 to 15 days"), no special status: in `customers.csv`, `personas.json`, the profile, and the `personas.json` bundled in `demo-lookup` and `demo-ai-dialog` (only that file was replaced in their packages). Calling the main line from demo.caller2 now reaches the 9-15 days queue, not agent 2.
 - The sandbox line (+1 775 249 1708) is attached to "CS - Test - Customer Phone (caller2)", which rings demo.caller2's softphone, so outbound tests can "call the customer". `poc/infra/outbound/customer_line.py restore` puts it back on "CS - Sandbox - Simple Flow".
-- The "Supervisors" workspace no longer has a custom `connect:AGENT` page (the modern view has no Apps menu, and supervisors open "Llamar con IA" from it). `setup_workspaces.py` no longer creates it.
+- The "Supervisors" workspace no longer has a custom `connect:AGENT` page (the modern view has no Apps menu, and supervisors open "Call with AI" from it). `setup_workspaces.py` no longer creates it.
 - The ElevenLabs flow, the outbound script, the supervisor app and the call tester are described in `poc/README.md` ("Demos de la ruta B").

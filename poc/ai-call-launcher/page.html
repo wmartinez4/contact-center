@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="es" data-theme="light"><!-- the Connect workspace is light, so the app stays light too -->
+<html lang="en" data-theme="light"><!-- the Connect workspace is light, so the app stays light too -->
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Llamar con IA</title>
+<title>Call with AI</title>
 <style>
   :root { --bg: #ffffff; --text: #1f1d2b; --muted: #6b6880; --line: #e4e1ef; --accent: #5b3fd1; --accent-text: #ffffff;
           --ok: #1d7a46; --warn: #9a5b00; --err: #b3261e; --soft: #f5f3fb; }
@@ -25,11 +25,11 @@
 </style>
 </head>
 <body>
-<h1>Llamar con IA</h1>
-<p class="lead">Connect llama al cliente y, cuando contesta, Sofía (asistente de IA) negocia un acuerdo de pago. Si el cliente pide una persona, la llamada pasa a la cola de su cuenta.</p>
-<div id="msg">Cargando…</div>
+<h1>Call with AI</h1>
+<p class="lead">Connect calls the customer and, when they answer, Sofia (AI assistant) negotiates a payment arrangement. If the customer asks for a person, the call goes to their account's queue.</p>
+<div id="msg">Loading…</div>
 <table id="list" hidden>
-  <thead><tr><th>Cuenta</th><th>Cliente</th><th>Mora</th><th>Saldo</th><th></th></tr></thead>
+  <thead><tr><th>Account</th><th>Customer</th><th>Days late</th><th>Balance</th><th></th></tr></thead>
   <tbody></tbody>
 </table>
 <div id="status"></div>
@@ -41,7 +41,7 @@ const msg = document.getElementById("msg");
 const statusBox = document.getElementById("status");
 let agentArn = "";
 
-const money = v => v ? Number(v).toLocaleString("es-US", { style: "currency", currency: "USD" }) : "";
+const money = v => v ? Number(v).toLocaleString("en-US", { style: "currency", currency: "USD" }) : "";
 
 async function api(path, options) {
   const r = await fetch(path, options);
@@ -56,7 +56,7 @@ function render(customers) {
   for (const c of customers) {
     // Profile fields are editable in Connect, so they are set as text, never as HTML.
     const tr = document.createElement("tr");
-    for (const [text, cls] of [[c.account, "num"], [c.name, ""], [`${c.daysPastDue} días`, "num"], [money(c.balance), "num"]]) {
+    for (const [text, cls] of [[c.account, "num"], [c.name, ""], [`${c.daysPastDue} days`, "num"], [money(c.balance), "num"]]) {
       const td = document.createElement("td");
       td.textContent = text;
       if (cls) td.className = cls;
@@ -70,12 +70,12 @@ function render(customers) {
     } else {
       // Connect's iframe blocks confirm(), so the second click on the same button confirms.
       const b = document.createElement("button");
-      b.textContent = "Llamar con IA";
+      b.textContent = "Call with AI";
       b.onclick = () => {
         if (b.dataset.armed) return call(c, b);
         b.dataset.armed = "1";
-        b.textContent = `Confirmar llamada a ${c.phone}`;
-        setTimeout(() => { delete b.dataset.armed; b.textContent = "Llamar con IA"; }, 6000);
+        b.textContent = `Confirm call to ${c.phone}`;
+        setTimeout(() => { delete b.dataset.armed; b.textContent = "Call with AI"; }, 6000);
       };
       cell.appendChild(b);
     }
@@ -87,9 +87,9 @@ function render(customers) {
 
 async function call(customer, button) {
   delete button.dataset.armed;
-  button.textContent = "Llamar con IA";
+  button.textContent = "Call with AI";
   document.querySelectorAll("button").forEach(b => b.disabled = true);
-  show(`Llamando a ${customer.name}…`);
+  show(`Calling ${customer.name}…`);
   try {
     const { contactId } = await api("/call", { method: "POST", headers: { "Content-Type": "application/json" },
                                                body: JSON.stringify({ account: customer.account, agent: agentArn }) });
@@ -108,12 +108,12 @@ function show(text, cls = "") {
 
 async function poll(contactId, name) {
   const s = await api(`/status?contact=${contactId}&agent=${encodeURIComponent(agentArn)}`);
-  if (s.state === "dialing") show(`Marcando a ${name}…`);
-  if (s.state === "in_call") show(`En llamada con ${name}.` + (s.agreement ? ` Acuerdo: ${s.agreement}` : ""));
+  if (s.state === "dialing") show(`Dialing ${name}…`);
+  if (s.state === "in_call") show(`On the call with ${name}.` + (s.agreement ? ` Agreement: ${s.agreement}` : ""));
   if (s.state === "ended") {
-    if (s.outcome === "agreement") show(`Acuerdo registrado: ${s.agreement}`, "ok");
-    else if (s.outcome === "escalate") show(`El cliente pidió una persona. ${s.handoff}`, "warn");
-    else show("La llamada terminó sin acuerdo.", "warn");
+    if (s.outcome === "agreement") show(`Agreement saved: ${s.agreement}`, "ok");
+    else if (s.outcome === "escalate") show(`The customer asked for a person. ${s.handoff}`, "warn");
+    else show("The call ended without an agreement.", "warn");
     document.querySelectorAll("button").forEach(b => b.disabled = false);
     return;
   }
@@ -126,7 +126,7 @@ try {
   render((await api(`/customers?agent=${encodeURIComponent(agentArn)}`)).customers);
 } catch (e) {
   msg.className = "err";
-  msg.textContent = e.message || "Abre esta app desde el espacio de trabajo de Amazon Connect.";
+  msg.textContent = e.message || "Open this app from the Amazon Connect agent workspace.";
 }
 </script>
 </body>

@@ -1,4 +1,4 @@
-"""Supervisor app "Llamar con IA" for the Amazon Connect workspace: lists the demo customers and starts an outbound
+"""Supervisor app "Call with AI" for the Amazon Connect workspace: lists the demo customers and starts an outbound
 call in which Connect dials the customer and hands the call to the ElevenLabs agent (route B flow).
 
 Served by a Lambda function URL:
@@ -58,11 +58,11 @@ def _customers():
         phone = p.get("PhoneNumber") or p.get("MobilePhoneNumber") or ""
         special = attrs.get("specialStatus") or ""
         if special:
-            blocked = "Estatus especial: lo atiende un especialista"
+            blocked = "Special status: handled by a specialist"
         elif not phone or FICTIONAL.match(phone):
-            blocked = "Teléfono ficticio"
+            blocked = "Fictional phone number"
         elif phone not in TEST_DESTINATIONS:
-            blocked = "Fuera de la lista de números de prueba"
+            blocked = "Not on the test number list"
         else:
             blocked = ""
         out.append({"account": str(account), "name": f"{p.get('FirstName', '')} {p.get('LastName', '')}".strip(),
@@ -74,10 +74,10 @@ def _customers():
 def _call(body):
     user = _supervisor(body.get("agent"))
     if not user:
-        return _json(403, {"error": "Solo un supervisor conectado puede iniciar llamadas con IA."})
+        return _json(403, {"error": "Only a logged-in supervisor can start AI calls."})
     customer = next((c for c in _customers() if c["account"] == str(body.get("account"))), None)
     if not customer:
-        return _json(404, {"error": "Cuenta no encontrada."})
+        return _json(404, {"error": "Account not found."})
     if customer["blocked"]:
         return _json(409, {"error": customer["blocked"]})
     contact = connect.start_outbound_voice_contact(
@@ -108,12 +108,12 @@ def handler(event, _context):
         return {"statusCode": 200, "headers": {"Content-Type": "text/html; charset=utf-8"}, "body": PAGE}
     if method == "GET" and path == "/customers":
         if not _supervisor(query.get("agent")):
-            return _json(403, {"error": "Solo disponible para supervisores conectados."})
+            return _json(403, {"error": "Only available to logged-in supervisors."})
         return _json(200, {"customers": _customers()})
     if method == "POST" and path == "/call":
         return _call(json.loads(event.get("body") or "{}"))
     if method == "GET" and path == "/status" and query.get("contact"):
         if not _supervisor(query.get("agent")):
-            return _json(403, {"error": "Solo disponible para supervisores conectados."})
+            return _json(403, {"error": "Only available to logged-in supervisors."})
         return _status(query["contact"])
     return _json(404, {"error": "not found"})

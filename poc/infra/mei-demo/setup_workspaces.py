@@ -107,7 +107,7 @@ assign(agents, [f"{PREFIX}.agent1", f"{PREFIX}.agent2", f"{PREFIX}.caller", f"{P
 
 sup = ensure_workspace("Supervisors", "Supervisor and admin: clean home page", f"{PREFIX}-supervisors")
 ensure_page(sup, "connect:HOME", HOME_VIEW, SUPERVISOR_HOME)
-# No custom agent page for supervisors: the custom one has no Apps menu, and they need it for "Llamar con IA"
+# No custom agent page for supervisors: the custom one has no Apps menu, and they need it for "Call with AI"
 # (poc/infra/ai-call-launcher). Without the page /agent shows the standard agent workspace. Removed 2026-11-12.
 set_logo(sup)
 assign(sup, [f"{PREFIX}.supervisor", f"{PREFIX}.admin"])

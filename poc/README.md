@@ -28,7 +28,7 @@ Todos los scripts se corren desde la raíz del repo con `AWS_PROFILE=cs-admin po
 | Usuario `demo.caller3` (+1 775 258 5298, la ruta B lo reconoce como María) | — | `infra/elevenlabs-route-b/setup_caller3.py` |
 | **Saliente:** Connect llama al cliente y pasa la llamada a Sofía | — | `infra/outbound/call_customer.py [cuenta]` |
 | **Teléfono del cliente de prueba:** la línea +1 775 249 1708 (cuenta 10, Willian) timbra en `demo.caller2` | — | `infra/outbound/customer_line.py ring` / `restore` (vuelve a "CS - Sandbox - Simple Flow") |
-| **App del supervisor "Llamar con IA"** (Lambda `ai-call-launcher` con URL pública, app de terceros del espacio de trabajo) | `ai-call-launcher/` | `infra/ai-call-launcher/setup.py` |
+| **App del supervisor "Call with AI"** (Lambda `ai-call-launcher` con URL pública, app de terceros del espacio de trabajo) | `ai-call-launcher/` | `infra/ai-call-launcher/setup.py` |
 | **Probador automático:** bot de Lex `call-tester` (voz Nova Sonic) + Bedrock (Claude Haiku 4.5) que hace de cliente | `call-tester/` (guiones en `scenarios.json`) | `infra/call-tester/setup.py`; correr: `infra/call-tester/run.py <escenario>` |
 
 Notas:

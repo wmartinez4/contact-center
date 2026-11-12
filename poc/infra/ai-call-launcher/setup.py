@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Supervisor app "Llamar con IA" (poc/ai-call-launcher): Lambda with a function URL, registered as a third-party
+"""Supervisor app "Call with AI" (poc/ai-call-launcher): Lambda with a function URL, registered as a third-party
 app of the Connect instance and granted only to the CallCenterManager (supervisor) and Admin security profiles.
 
 Re-runnable.
@@ -19,7 +19,7 @@ IID = "c2f9ca2b-eb05-4a82-9809-1d7c914333ba"
 INSTANCE_ARN = f"arn:aws:connect:{REGION}:{ACCOUNT}:instance/{IID}"
 DOMAIN = "amazon-connect-cs-connect-demo"
 NAME = "ai-call-launcher"
-APP_NAME = "Llamar con IA"
+APP_NAME = "Call with AI"
 NAMESPACE = "ai-call-launcher"
 FLOW_NAME = "ElevenLabs Transfer"
 CALLER_ID = "+17752550671"
