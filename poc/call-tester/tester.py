@@ -11,7 +11,7 @@ import os
 import boto3
 
 MODEL = os.environ.get("MODEL_ID", "us.anthropic.claude-haiku-4-5-20251001-v1:0")
-MAX_TURNS = int(os.environ.get("MAX_TURNS", "14"))
+MAX_TURNS = int(os.environ.get("MAX_TURNS", "30"))  # Lex splits long sentences into several turns
 SCENARIOS = json.load(open(os.path.join(os.path.dirname(__file__), "scenarios.json"), encoding="utf-8"))
 BEDROCK = boto3.client("bedrock-runtime")
 

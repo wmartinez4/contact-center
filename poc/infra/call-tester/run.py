@@ -85,7 +85,63 @@ def run(name):
     return ok
 
 
+ANSWER_FLOW = "CS - Test - Answer as Customer"
+SOFIA_FLOW = "CS - Inbound - Sofia AI"
+
+
+def _flow_ids():
+    return {f["Name"]: f for p in connect.get_paginator("list_contact_flows").paginate(InstanceId=IID, ContactFlowTypes=["CONTACT_FLOW"])
+            for f in p["ContactFlowSummaryList"]}
+
+
+def run_outbound(name):
+    """Sofia calls the scenario's customer line; for the length of the test that line is answered by the tester
+    (a small flow sets the scenario and hands the call to the tester flow), then the line gets its flow back."""
+    sc = SCENARIOS[name]
+    flows = _flow_ids()
+    tester_arn = next(f["Arn"] for f in flows.values() if f["Id"] == STATE["flowId"])
+    content = json.dumps({"Version": "2019-10-30", "StartAction": "Set", "Actions": [
+        {"Identifier": "Set", "Type": "UpdateContactAttributes", "Parameters": {"Attributes": {"scenario": name, "lang": sc["locale"][:2]},
+                                                                               "TargetContact": "Current"},
+         "Transitions": {"NextAction": "Tester", "Errors": [{"NextAction": "Tester", "ErrorType": "NoMatchingError"}], "Conditions": []}},
+        {"Identifier": "Tester", "Type": "TransferToFlow", "Parameters": {"ContactFlowId": tester_arn},
+         "Transitions": {"NextAction": "End", "Errors": [{"NextAction": "End", "ErrorType": "NoMatchingError"}], "Conditions": []}},
+        {"Identifier": "End", "Type": "DisconnectParticipant", "Parameters": {}, "Transitions": {}}]})
+    if ANSWER_FLOW in flows:
+        connect.update_contact_flow_content(InstanceId=IID, ContactFlowId=flows[ANSWER_FLOW]["Id"], Content=content)
+        answer_id = flows[ANSWER_FLOW]["Id"]
+    else:
+        answer_id = connect.create_contact_flow(InstanceId=IID, Name=ANSWER_FLOW, Type="CONTACT_FLOW", Content=content,
+                                                Description="Tests only: the call tester answers a customer line")["ContactFlowId"]
+    number = next(n for n in connect.list_phone_numbers_v2(InstanceId=IID)["ListPhoneNumbersSummaryList"] if n["PhoneNumber"] == sc["line"])
+    previous = next((a["FlowId"] for a in connect.list_flow_associations(InstanceId=IID, ResourceType="VOICE_PHONE_NUMBER")["FlowAssociationSummaryList"]
+                     if a["ResourceId"] == number["PhoneNumberArn"]), None)
+    connect.associate_phone_number_contact_flow(PhoneNumberId=number["PhoneNumberId"], InstanceId=IID, ContactFlowId=answer_id)
+    try:
+        started = dt.datetime.now(dt.timezone.utc)
+        sofia_id = connect.start_outbound_voice_contact(
+            InstanceId=IID, ContactFlowId=flows[SOFIA_FLOW]["Id"], DestinationPhoneNumber=sc["line"], SourcePhoneNumber=sc["from"],
+            Attributes={"direction": "outbound", "campaign": "call-tester"})["ContactId"]
+        print(f"\n== {name}: {sc['description']}\n  Sofia contact {sofia_id}", flush=True)
+        wait_end(sofia_id)
+        tester_id = inbound_contact(started, dt.datetime.now(dt.timezone.utc), sofia_id)
+        turns = dialogue(tester_id, started) if tester_id else []
+    finally:
+        if previous:
+            connect.associate_phone_number_contact_flow(PhoneNumberId=number["PhoneNumberId"], InstanceId=IID,
+                                                        ContactFlowId=previous.rsplit("/", 1)[-1])
+        else:
+            connect.disassociate_phone_number_contact_flow(PhoneNumberId=number["PhoneNumberId"], InstanceId=IID)
+    time.sleep(int(os.environ.get("POST_CALL_WAIT", "45")))
+    attrs = connect.get_contact_attributes(InstanceId=IID, InitialContactId=sofia_id)["Attributes"]
+    got = {k: attrs.get(k) for k in sc["expect"]}
+    ok = bool(turns) and got == sc["expect"]
+    print(f"  tester contact {tester_id} | turns: {len(turns)}\n  expected {sc['expect']} got {got} -> {'OK' if ok else 'FAIL'}")
+    route_b_extras(attrs, started)
+    return ok
+
+
 if __name__ == "__main__":
-    results = {n: run(n) for n in (sys.argv[1:] or list(SCENARIOS))}
+    results = {n: (run_outbound(n) if SCENARIOS[n].get("outbound") else run(n)) for n in (sys.argv[1:] or list(SCENARIOS))}
     print("\n", json.dumps(results))
     sys.exit(0 if all(results.values()) else 1)
