@@ -7,3 +7,5 @@ node_modules/
 poc/.credentials.local
 poc/.credentials.old.local
 poc/.ai_bot.json
+poc/elevenlabs-ruta-b/.state.json
+poc/call-tester/.state.json

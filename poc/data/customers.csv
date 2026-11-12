@@ -1,10 +1,28 @@
 accountNumber,firstName,lastName,language,phone,email,daysPastDue,specialStatus,balance,paymentDue,expectedQueue,vehicle,notes,birthDate,gender,address,city,state,postalCode,additionalInfo
-1,Michael,Johnson,en,+10000000001,michael.johnson@example.com,0,,412.50,2026-11-20,Q-Current,2021 Toyota Corolla,Invented customer,1984-03-12,male,1420 Oak Ridge Dr,Houston,TX,77004,Prefers calls after 5 pm. Autopay off.
-2,Maria,Hernandez,es,+10000000002,maria.hernandez@example.com,5,,1180.00,2026-11-04,Q-1-8,2019 Honda Civic,Invented customer,1990-07-25,female,3307 Pecan St,San Antonio,TX,78210,Prefiere español. Pidió recordatorio por SMS.
-3,Robert,Miller,en,+10000000003,robert.miller@example.com,22,,2640.75,2026-10-18,Q-16-30,2020 Ford F-150,Invented customer,1978-11-02,male,88 Riverside Ave,Dallas,TX,75208,Promised to pay on 2026-10-30; payment not received.
-4,Luisa,Ramirez,es,+10000000004,luisa.ramirez@example.com,47,,5210.30,2026-09-23,Q-31Plus,2018 Nissan Altima,Invented customer,1986-01-19,female,515 Mesquite Ln,El Paso,TX,79912,Prefiere español. Dos promesas de pago incumplidas.
-5,David,Thompson,en,+10000000005,david.thompson@example.com,12,Redemptions,7890.00,2026-10-28,Q-Redemptions,2017 Chevrolet Malibu,Invented customer,1972-09-08,male,2210 Lakeview Blvd,Austin,TX,78745,Vehicle in redemption process; repossessed 2026-10-20.
-6,Sofia,Castillo,es,+10000000006,sofia.castillo@example.com,3,EPD,980.00,2026-11-06,Q-EPD,2022 Hyundai Elantra,Invented customer,1995-05-30,female,74 Sunset Ct,Laredo,TX,78041,Prefiere español. Primer pago rechazado (fondos insuficientes).
-8,Mauricio,Cuevas,es,+10000000008,mauricio.cuevas@example.com,18,,3125.40,2026-10-23,Q-16-30,2020 Toyota RAV4,Real demo phone; account data simulated,1983-04-14,male,910 Magnolia St,Houston,TX,77007,Prefiere español. Cliente desde 2020.
-9,Mauricio,Ordonez,en,+16787079207,mauricio.ordonez@example.com,10,,1460.00,2026-10-31,Q-9-15,2021 Kia Sorento,Real demo phone; account data simulated,1981-12-03,male,455 Cedar Park Rd,Atlanta,GA,30309,Prefers email follow-up. Customer since 2021.
-10,Willian,Martinez,es,+17752491708,willian.martinez@example.com,12,Redemptions,6240.00,2026-10-29,Q-Redemptions,2022 Toyota Tacoma,Rehearsal customer; caller ID of demo.caller2 (sandbox line); account data simulated,1988-06-21,male,1200 Main St,Dallas,TX,75202,Prefiere español. Vehículo en proceso de redención.
+1,Michael,Johnson,en,+17135550101,michael.johnson@example.com,0,,412.50,2026-11-20,Q-Current,2021 Toyota Corolla,Invented customer,1984-03-12,male,1420 Oak Ridge Dr,Houston,TX,77004,"Prefers calls after 5 pm. Autopay off.
+[config]
+maxInstallments:"
+2,Maria,Hernandez,es,+12105550102,maria.hernandez@example.com,5,,1180.00,2026-11-04,Q-1-8,2019 Honda Civic,Invented customer,1990-07-25,female,3307 Pecan St,San Antonio,TX,78210,"Prefiere español. Pidió recordatorio por SMS.
+[config]
+maxInstallments:"
+3,Robert,Miller,en,+12145550103,robert.miller@example.com,22,,2640.75,2026-10-18,Q-16-30,2020 Ford F-150,Invented customer,1978-11-02,male,88 Riverside Ave,Dallas,TX,75208,"Promised to pay on 2026-10-30; payment not received.
+[config]
+maxInstallments:"
+4,Luisa,Ramirez,es,+19155550104,luisa.ramirez@example.com,47,,5210.30,2026-09-23,Q-31Plus,2018 Nissan Altima,Invented customer,1986-01-19,female,515 Mesquite Ln,El Paso,TX,79912,"Prefiere español. Dos promesas de pago incumplidas.
+[config]
+maxInstallments:"
+5,David,Thompson,en,+15125550105,david.thompson@example.com,12,Redemptions,7890.00,2026-10-28,Q-Redemptions,2017 Chevrolet Malibu,Invented customer,1972-09-08,male,2210 Lakeview Blvd,Austin,TX,78745,"Vehicle in redemption process; repossessed 2026-10-20.
+[config]
+maxInstallments:"
+6,Sofia,Castillo,es,+19565550106,sofia.castillo@example.com,3,EPD,980.00,2026-11-06,Q-EPD,2022 Hyundai Elantra,Invented customer,1995-05-30,female,74 Sunset Ct,Laredo,TX,78041,"Prefiere español. Primer pago rechazado (fondos insuficientes).
+[config]
+maxInstallments:"
+8,Mauricio,Cuevas,es,+17135550108,mauricio.cuevas@example.com,18,,3125.40,2026-10-23,Q-16-30,2020 Toyota RAV4,Real demo phone; account data simulated,1983-04-14,male,910 Magnolia St,Houston,TX,77007,"Prefiere español. Cliente desde 2020.
+[config]
+maxInstallments:"
+9,Mauricio,Ordonez,en,+16787079207,mauricio.ordonez@example.com,10,,1460.00,2026-10-31,Q-9-15,2021 Kia Sorento,Real demo phone; account data simulated,1981-12-03,male,455 Cedar Park Rd,Atlanta,GA,30309,"Prefers email follow-up. Customer since 2021.
+[config]
+maxInstallments:"
+10,Willian,Martinez,es,+17752491708,willian.martinez@example.com,12,,6240.00,2026-10-29,Q-9-15,2022 Toyota Tacoma,Rehearsal customer; caller ID of demo.caller2 and customer phone of outbound tests (sandbox line); account data simulated,1988-06-21,male,1200 Main St,Dallas,TX,75202,"Prefiere español. Pidió que lo llamen después de las 5 pm.
+[config]
+maxInstallments:"

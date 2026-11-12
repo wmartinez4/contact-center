@@ -101,7 +101,7 @@
       "code": "8",
       "id": "P-008",
       "name": "Mauricio Cuevas",
-      "phone": "+10000000008",
+      "phone": "+17135550108",
       "language": "es",
       "daysPastDue": 18,
       "specialStatus": null,
@@ -130,11 +130,11 @@
       "phone": "+17752491708",
       "language": "es",
       "daysPastDue": 12,
-      "specialStatus": "Redemptions",
+      "specialStatus": null,
       "balance": 6240.0,
       "paymentDue": "2026-10-29",
-      "expectedQueue": "Q-Redemptions",
-      "tests": "Known caller for rehearsals: demo.caller2 calls with the sandbox line as caller ID; personal greeting in Spanish, special status routes to agent 2"
+      "expectedQueue": "Q-9-15",
+      "tests": "Known caller for rehearsals: demo.caller2 calls with the sandbox line as caller ID (personal greeting in Spanish, 9-15 days queue); also the customer phone of outbound tests (the sandbox line rings demo.caller2). Was Redemptions until 2026-11-12"
     }
   ],
   "reserved": [

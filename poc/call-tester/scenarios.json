@@ -1,0 +1,10 @@
+{
+  "maria-installments": {
+    "description": "Route B, known caller: Maria (account 2) cannot pay the whole balance and asks for 4 installments.",
+    "line": "+17752550671",
+    "from": "+17752585298",
+    "locale": "es_US",
+    "persona": "Eres María Hernández, titular de la cuenta 2. Debes 1,180 dólares de tu préstamo de auto y vas 5 días atrasada. Llamaste al área de cuentas y te atiende una asistente. Confirma que eres la titular cuando te lo pregunten. No puedes pagar todo hoy: pide pagar en 4 cuotas. Si te dicen que el máximo es menor, acepta el máximo que te ofrezcan, con la primera cuota hoy. Cuando te lean el acuerdo, confírmalo con un sí claro. No des datos de tarjeta. Despídete cuando la asistente se despida.",
+    "expect": {"aiOutcome": "agreement"}
+  }
+}

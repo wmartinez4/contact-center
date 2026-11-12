@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="es" data-theme="light"><!-- the Connect workspace is light, so the app stays light too -->
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Llamar con IA</title>
+<style>
+  :root { --bg: #ffffff; --text: #1f1d2b; --muted: #6b6880; --line: #e4e1ef; --accent: #5b3fd1; --accent-text: #ffffff;
+          --ok: #1d7a46; --warn: #9a5b00; --err: #b3261e; --soft: #f5f3fb; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #17151f; --text: #ecebf2; --muted: #a29fb5;
+          --line: #2f2c3d; --accent: #8f78ff; --accent-text: #17151f; --ok: #5fd08f; --warn: #f0b252; --err: #ff8a80; --soft: #211e2c; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 16px; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  h1 { font-size: 17px; margin: 0 0 4px; }
+  p.lead { margin: 0 0 14px; color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  th { font-size: 12px; color: var(--muted); font-weight: 600; }
+  td.num { font-variant-numeric: tabular-nums; }
+  button { background: var(--accent); color: var(--accent-text); border: 0; border-radius: 6px; padding: 6px 12px; font: inherit; font-weight: 600; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  .why { color: var(--muted); font-size: 12px; }
+  #status { margin-top: 16px; padding: 12px; border-radius: 8px; background: var(--soft); display: none; }
+  .ok { color: var(--ok); } .warn { color: var(--warn); } .err { color: var(--err); }
+</style>
+</head>
+<body>
+<h1>Llamar con IA</h1>
+<p class="lead">Connect llama al cliente y, cuando contesta, Sofía (asistente de IA) negocia un acuerdo de pago. Si el cliente pide una persona, la llamada pasa a la cola de su cuenta.</p>
+<div id="msg">Cargando…</div>
+<table id="list" hidden>
+  <thead><tr><th>Cuenta</th><th>Cliente</th><th>Mora</th><th>Saldo</th><th></th></tr></thead>
+  <tbody></tbody>
+</table>
+<div id="status"></div>
+<script type="module">
+import { AmazonConnectApp } from "https://cdn.jsdelivr.net/npm/@amazon-connect/app@1.0.14/+esm";
+import { AgentClient } from "https://cdn.jsdelivr.net/npm/@amazon-connect/contact@1.0.14/+esm";
+
+const msg = document.getElementById("msg");
+const statusBox = document.getElementById("status");
+let agentArn = "";
+
+const money = v => v ? Number(v).toLocaleString("es-US", { style: "currency", currency: "USD" }) : "";
+
+async function api(path, options) {
+  const r = await fetch(path, options);
+  const body = await r.json();
+  if (!r.ok) throw new Error(body.error || r.statusText);
+  return body;
+}
+
+function render(customers) {
+  const tbody = document.querySelector("#list tbody");
+  tbody.innerHTML = "";
+  for (const c of customers) {
+    // Profile fields are editable in Connect, so they are set as text, never as HTML.
+    const tr = document.createElement("tr");
+    for (const [text, cls] of [[c.account, "num"], [c.name, ""], [`${c.daysPastDue} días`, "num"], [money(c.balance), "num"]]) {
+      const td = document.createElement("td");
+      td.textContent = text;
+      if (cls) td.className = cls;
+      tr.appendChild(td);
+    }
+    const cell = tr.appendChild(document.createElement("td"));
+    if (c.blocked) {
+      const why = cell.appendChild(document.createElement("span"));
+      why.className = "why";
+      why.textContent = c.blocked;
+    } else {
+      // Connect's iframe blocks confirm(), so the second click on the same button confirms.
+      const b = document.createElement("button");
+      b.textContent = "Llamar con IA";
+      b.onclick = () => {
+        if (b.dataset.armed) return call(c, b);
+        b.dataset.armed = "1";
+        b.textContent = `Confirmar llamada a ${c.phone}`;
+        setTimeout(() => { delete b.dataset.armed; b.textContent = "Llamar con IA"; }, 6000);
+      };
+      cell.appendChild(b);
+    }
+    tbody.appendChild(tr);
+  }
+  document.getElementById("list").hidden = false;
+  msg.textContent = "";
+}
+
+async function call(customer, button) {
+  delete button.dataset.armed;
+  button.textContent = "Llamar con IA";
+  document.querySelectorAll("button").forEach(b => b.disabled = true);
+  show(`Llamando a ${customer.name}…`);
+  try {
+    const { contactId } = await api("/call", { method: "POST", headers: { "Content-Type": "application/json" },
+                                               body: JSON.stringify({ account: customer.account, agent: agentArn }) });
+    poll(contactId, customer.name);
+  } catch (e) {
+    show(e.message, "err");
+    document.querySelectorAll("button").forEach(b => b.disabled = false);
+  }
+}
+
+function show(text, cls = "") {
+  statusBox.style.display = "block";
+  statusBox.textContent = text;
+  statusBox.className = cls;
+}
+
+async function poll(contactId, name) {
+  const s = await api(`/status?contact=${contactId}&agent=${encodeURIComponent(agentArn)}`);
+  if (s.state === "dialing") show(`Marcando a ${name}…`);
+  if (s.state === "in_call") show(`En llamada con ${name}.` + (s.agreement ? ` Acuerdo: ${s.agreement}` : ""));
+  if (s.state === "ended") {
+    if (s.outcome === "agreement") show(`Acuerdo registrado: ${s.agreement}`, "ok");
+    else if (s.outcome === "escalate") show(`El cliente pidió una persona. ${s.handoff}`, "warn");
+    else show("La llamada terminó sin acuerdo.", "warn");
+    document.querySelectorAll("button").forEach(b => b.disabled = false);
+    return;
+  }
+  setTimeout(() => poll(contactId, name), 4000);
+}
+
+try {
+  AmazonConnectApp.init({ onCreate: () => {}, onDestroy: () => {} });
+  agentArn = await new AgentClient().getARN();
+  render((await api(`/customers?agent=${encodeURIComponent(agentArn)}`)).customers);
+} catch (e) {
+  msg.className = "err";
+  msg.textContent = e.message || "Abre esta app desde el espacio de trabajo de Amazon Connect.";
+}
+</script>
+</body>
+</html>
