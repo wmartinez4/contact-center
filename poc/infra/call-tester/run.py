@@ -15,6 +15,9 @@ import time
 
 import boto3
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "mei-demo"))
+from flow_layout import layout  # noqa: E402  (block positions, so the flow is readable in the designer)
+
 REGION, IID = "us-east-1", "c2f9ca2b-eb05-4a82-9809-1d7c914333ba"
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 CODE = os.path.join(ROOT, "poc", "call-tester")
@@ -107,6 +110,7 @@ def run_outbound(name):
         {"Identifier": "Tester", "Type": "TransferToFlow", "Parameters": {"ContactFlowId": tester_arn},
          "Transitions": {"NextAction": "End", "Errors": [{"NextAction": "End", "ErrorType": "NoMatchingError"}], "Conditions": []}},
         {"Identifier": "End", "Type": "DisconnectParticipant", "Parameters": {}, "Transitions": {}}]})
+    content = json.dumps(layout(json.loads(content)))
     if ANSWER_FLOW in flows:
         connect.update_contact_flow_content(InstanceId=IID, ContactFlowId=flows[ANSWER_FLOW]["Id"], Content=content)
         answer_id = flows[ANSWER_FLOW]["Id"]

@@ -13,8 +13,13 @@ Names seen in Connect avoid the voice vendor: attribute aiAgent = "Sofia AI", fl
     AWS_PROFILE=cs-admin python3 poc/infra/elevenlabs-route-b/setup_flow.py
 """
 import json
+import os
+import sys
 
 import boto3
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "mei-demo"))
+from flow_layout import layout  # noqa: E402  (block positions, so the flow is readable in the designer)
 
 REGION = "us-east-1"
 EXPECTED_ACCOUNT = "383799408374"
@@ -115,7 +120,7 @@ act("FallbackQueue", "UpdateContactTargetQueue", {"QueueId": fallback_arn}, "ToQ
 act("ToQueue", "TransferContactToQueue", {}, "End", [("QueueAtCapacity", "End"), (NM, "End")])
 act("End", "DisconnectParticipant", {})
 
-content = json.dumps({"Version": "2019-10-30", "StartAction": "Start", "Metadata": {}, "Actions": actions})
+content = json.dumps(layout({"Version": "2019-10-30", "StartAction": "Start", "Metadata": {}, "Actions": actions}))
 existing = next((f for f in connect.list_contact_flows(InstanceId=INSTANCE_ID, ContactFlowTypes=["CONTACT_FLOW"])["ContactFlowSummaryList"]
                  if f["Name"] == FLOW_NAME), None)
 try:

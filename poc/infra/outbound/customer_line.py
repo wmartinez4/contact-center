@@ -9,9 +9,13 @@
     AWS_PROFILE=cs-admin python3 poc/infra/outbound/customer_line.py ring|restore [caller2|caller3]
 """
 import json
+import os
 import sys
 
 import boto3
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "mei-demo"))
+from flow_layout import layout  # noqa: E402  (block positions, so the flow is readable in the designer)
 
 REGION, ACCOUNT = "us-east-1", "383799408374"
 IID = "c2f9ca2b-eb05-4a82-9809-1d7c914333ba"
@@ -42,6 +46,7 @@ def ensure_flow(username):
                                                          {"NextAction": "End", "ErrorType": "NoMatchingError"}], "Conditions": []}},
         {"Identifier": "End", "Type": "DisconnectParticipant", "Parameters": {}, "Transitions": {}},
     ]})
+    content = json.dumps(layout(json.loads(content)))
     existing = flows().get(name)
     if existing:
         c.update_contact_flow_content(InstanceId=IID, ContactFlowId=existing, Content=content)
