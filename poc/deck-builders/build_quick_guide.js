@@ -293,6 +293,48 @@ const head = (text) => cell(text, { bold: true, color: "FFFFFF", fill: { color: 
   s.addNotes("Sources: docs/proposal/modelo-de-costos.md (Amazon Connect list prices, verified 2026-11-10: voice $0.038/min on Connect Customer including Nova Sonic, Lex, generative voices, analytics and evaluations; telephony $0.0022 in and $0.0048 out per minute in the US; local number $0.03/day; outbound campaigns $0.045/min; third-party AI agents $0.01/min) and docs/research/verificacion-supuestos-2026-11-09.md (ElevenLabs $0.08/min plus LLM, Business $990/month). The LLM range ($0.005 to $0.045/min) and SIP or Twilio telephony are researchers' assumptions. Per-agent figures assume 20 days a month at $0.0415/min. The sandbox's own AWS services are not measured: check Cost Explorer before quoting.");
 }
 
+// ---------- Slide 6: what the demo has cost so far ----------
+{
+  const s = pres.addSlide({ masterName: "GUIDE_T", sectionTitle: "Guide" });
+  s.addText("What the demo has cost so far", { placeholder: "title" });
+  s.addText("November 11 and 12, 2026 (as of Nov 12, midday). Today's AWS figure is an estimate", { placeholder: "sub" });
+
+  const rows = [
+    ["Amazon Connect: voice, Nova AI, Contact Lens", "$8.48", "≈ $8.00", "Cost Explorer; today estimated"],
+    ["Connect telephony", "$0.78", "≈ $0.40", "Cost Explorer; today estimated"],
+    ["Twilio: Sofia's number and calls", "$1.43", "$1.00", "Twilio billing"],
+    ["Lambda, DynamoDB, S3, Secrets Manager, KMS, Bedrock (tester)", "≈ $0.10", "≈ $0.10", "Cents"],
+  ];
+  const data = [[head("Service"), head("Nov 11"), head("Nov 12"), head("Source")]];
+  rows.forEach((r, i) => {
+    const fill = { color: i % 2 ? "FFFFFF" : TINT.grey };
+    data.push([cell(r[0], { fill, bold: true }), cell(r[1], { fill, align: "right" }), cell(r[2], { fill, align: "right" }), cell(r[3], { fill, color: K.dk2 })]);
+  });
+  data.push([cell("Total", { bold: true, fill: { color: TINT.out } }), cell("≈ $10.80", { bold: true, align: "right", fill: { color: TINT.out } }),
+             cell("≈ $9.50", { bold: true, align: "right", fill: { color: TINT.out } }), cell("≈ $20 in two days", { bold: true, color: K.accent2, fill: { color: TINT.out } })]);
+  s.addTable(data, { x: 0.45, y: 1.68, w: 8.1, colW: [3.9, 1.05, 1.05, 2.1], rowH: 0.46, border: { type: "solid", pt: 0.5, color: TINT.line }, objectName: "Spend by service" });
+
+  s.addText([
+    { text: "How today's figure was estimated: ", options: { bold: true } },
+    { text: "Cost Explorer takes up to a day to show costs, so today uses the call records: 123 calls, about 202 billable minutes at $0.0415 a minute. The same method gives $9.00 for Nov 11, against $9.26 in Cost Explorer.", options: {} },
+  ], { x: 0.45, y: 4.35, w: 8.1, h: 0.8, fontSize: 11.5, color: K.dk1, valign: "top", margin: 0, isTextBox: true });
+  s.addText([
+    { text: "Not counted: ", options: { bold: true } },
+    { text: "other projects in the same AWS account (Lightsail, RDS, VPC and some Lambdas, about $2.50 a day) and Claude Sonnet 4.5 on Bedrock ($1.59 on Nov 11), a model the demo does not use. Most of the Connect spend comes from the automated test calls.", options: {} },
+  ], { x: 0.45, y: 5.2, w: 8.1, h: 0.95, fontSize: 11.5, color: K.dk1, valign: "top", margin: 0, isTextBox: true });
+
+  // Stat cards
+  const card = (y, h, big, label, color, fill) => {
+    s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: 8.85, y, w: 4.03, h, fill: { color: fill }, line: { color: fill }, rectRadius: 0.08, objectName: `Stat ${label}` });
+    s.addText(big, { x: 9.05, y: y + 0.15, w: 3.65, h: 0.75, fontSize: 40, bold: true, color, margin: 0, isTextBox: true });
+    s.addText(label, { x: 9.05, y: y + 0.92, w: 3.65, h: h - 1.02, fontSize: 12, color: K.dk1, valign: "top", margin: 0, isTextBox: true });
+  };
+  card(1.68, 1.7, "≈ $20", "Spent on the demo in two days, ElevenLabs plan aside: about $17.70 on AWS and $2.40 on Twilio", K.accent2, TINT.out);
+  card(3.58, 2.5, "81%", "Of this month's ElevenLabs credits already used (Starter plan: 29,932 of 37,112). Sofia had 29 conversations, about 48 minutes, today. If the credits run out, Sofia stops answering: upgrade the plan before more tests", K.accent4, "F6E4E4");
+
+  s.addNotes("AWS: Cost Explorer, daily unblended cost by service. Twilio: Usage Records API, totalprice for yesterday and today. ElevenLabs: /v1/user/subscription (credits) and the agent's conversation list (count and minutes). Nov 12 Connect cost estimated from contact records (minimum 60 s per call) at $0.0415/min (voice $0.038 plus mixed US telephony). Numbers read on 2026-11-12 around 12:00 Central.");
+}
+
 (async () => {
   await pres.writeFile({ fileName: "guide.pptx" });
   await applyTheme("guide.pptx", THEME);
