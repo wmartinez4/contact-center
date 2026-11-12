@@ -14,7 +14,7 @@ Una segunda demo, junto a la del agente de IA con Nova Sonic: la llamada entra p
 
 | Decisión | Detalle | Estado |
 |---|---|---|
-| Entrada | Número de Connect **+1 775 255 0671** (descripción "ElevenLabs"). El flujo A2A queda guardado pero sin número | Decidido |
+| Entrada | Número de Connect **+1 775 255 0671** (descripción "Sofia AI line"; era "ElevenLabs" hasta el 2026-11-12). El flujo A2A queda guardado pero sin número | Decidido |
 | Agente | `collections-agent` (`agent_3401m773nf9gekbsv9eqeypdajc5`), un solo agente bilingüe | Decidido |
 | Número de ElevenLabs | Twilio **+1 952 866 1775** (`phone1`), hoy asignado a **Lina Colombia**; pasa a `collections-agent` | Decidido (2026-11-12): Lina queda sin número durante la demo |
 | Verificación de identidad | Solo confirmar el nombre: "¿Hablo con Maria Hernandez, titular de la cuenta?" Si dice que sí, queda verificada. El cliente ya fue identificado por su número en Connect | Decidido para la demo; en producción se agrega un segundo dato |
@@ -29,7 +29,7 @@ Una segunda demo, junto a la del agente de IA con Nova Sonic: la llamada entra p
 ```mermaid
 flowchart LR
   C[Cliente] -->|llama| N[Número Connect<br/>+1 775 255 0671]
-  N --> F[Flujo ElevenLabs Transfer]
+  N --> F[Flujo CS - Inbound - Sofia AI]
   F -->|identifica y prepara| API[API de voz<br/>Lambda + API Gateway]
   F -->|Transfer to phone number| T[Número Twilio<br/>+1 952 866 1775]
   T --> E[collections-agent<br/>ElevenLabs]
@@ -81,7 +81,7 @@ sequenceDiagram
   end
 ```
 
-Detalles del flujo de Connect (`ElevenLabs Transfer`):
+Detalles del flujo de Connect (`CS - Inbound - Sofia AI`, antes `ElevenLabs Transfer`):
 
 1. *Set logging behavior*, y grabación y análisis (como el demo).
 2. Aviso de grabación en el idioma del cliente. El aviso de IA lo dice el agente de ElevenLabs al saludar.
@@ -188,7 +188,7 @@ El agente nunca promete nada que `propose_plan` no haya validado. Las reglas viv
 
 ## 9. Qué se ve en Connect
 
-- **Atributos del contacto** (en la búsqueda de contactos y en el detalle): `aiOutcome`, `agreementId`, `agreementSummary` (por ejemplo, "3 cuotas de $393.33 desde 2026-11-19"), `elevenlabsConversationId`, `transcriptKey`.
+- **Atributos del contacto** (en la búsqueda de contactos y en el detalle): `aiOutcome`, `agreementId`, `agreementSummary` (por ejemplo, "3 cuotas de $393.33 desde 2026-11-19"), `aiConversationId` (antes `elevenlabsConversationId`), `transcriptS3`, `audioS3`, `aiCallSummary`.
 - **Grabación del contacto**: la de Connect, que debería incluir la conversación con el agente de ElevenLabs (por verificar).
 - **Perfil del cliente** en Customer Profiles: último acuerdo en sus atributos, visible para el agente humano.
 - **Si pasa a una persona**: el agente ve el resumen de la IA en los atributos del contacto, porque es el mismo contacto.
@@ -205,7 +205,7 @@ El agente nunca promete nada que `propose_plan` no haya validado. Las reglas viv
 
 | Recurso | Nombre |
 |---|---|
-| Flujo de Connect | `ElevenLabs Transfer` |
+| Flujo de Connect | `CS - Inbound - Sofia AI` (antes `ElevenLabs Transfer`) |
 | Lambda | `voice-agent-api` (y, si hace falta, una Lambda ligera para el flujo) |
 | API Gateway | `voice-agent-api` |
 | DynamoDB | `voice-calls`, `payment-agreements` |

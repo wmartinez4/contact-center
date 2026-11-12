@@ -37,19 +37,23 @@ S3 = boto3.client("s3")
 BUCKET = os.environ.get("ARTIFACTS_BUCKET", "")
 LOCAL_TZ = ZoneInfo("America/Chicago")
 PENDING_SECONDS = 300
-# Route B only: test phones that should act as a given demo account (e.g. the caller2 softphone as Maria),
-# without changing the profiles the main Connect demo relies on.
 _api_secret = None
 
+# By language and direction. The reason for an outbound call stays generic until the account holder confirms
+# who they are, so no account detail reaches anyone else.
 FIRST_MESSAGE = {
-    "es": "Hola, le habla Sofía, asistente virtual del área de cuentas. Esta llamada puede ser grabada. "
-          "¿Hablo con {name}, titular de la cuenta?",
-    "en": "Hi, this is Sofia, a virtual assistant from the accounts team. This call may be recorded. "
-          "Am I speaking with {name}, the account holder?",
+    ("es", "inbound"): "Hola, hablas con Sofía, del área de cuentas. Esta llamada puede ser grabada. "
+                       "¿Hablo con {name}, titular de la cuenta?",
+    ("es", "outbound"): "Hola, hablas con Sofía, del área de cuentas. Te llamo por un tema de tu cuenta, y esta llamada "
+                        "puede ser grabada. ¿Hablo con {name}, titular de la cuenta?",
+    ("en", "inbound"): "Hi, this is Sofia from the accounts team. This call may be recorded. "
+                       "Am I speaking with {name}, the account holder?",
+    ("en", "outbound"): "Hi, this is Sofia from the accounts team. I'm calling about your account, and this call may be "
+                        "recorded. Am I speaking with {name}, the account holder?",
 }
 # Caller not recognized by phone: English by default, with a short offer to switch to Spanish.
-FIRST_MESSAGE_UNKNOWN = ("Hi, this is Sofia, a virtual assistant from the accounts team. This call may be recorded. "
-                         "Could you tell me your account number, please? Si prefiere español, solo dígamelo.")
+FIRST_MESSAGE_UNKNOWN = ("Hi, this is Sofia from the accounts team. This call may be recorded. "
+                         "Could you tell me your account number, please? Si prefieres español, solo dímelo.")
 
 
 def handler(event, _context):
@@ -80,7 +84,8 @@ def _connect(event):
         now = int(time.time())
         CALLS.put_item(Item={"contactId": contact["ContactId"], "phone": phone, "account": params.get("account", ""),
                              "language": params.get("language", "en"), "status": "pending", "createdAt": now,
-                             "source": "connect"})
+                             "source": "connect",
+                             "direction": "outbound" if params.get("direction") == "outbound" else "inbound"})
         return {"ok": "true"}
     if action == "outcome":
         item = CALLS.get_item(Key={"contactId": contact["ContactId"]}).get("Item") or {}
@@ -150,21 +155,23 @@ def _init(body):
                    else find_by_phone(PROFILES, DOMAIN, phone))
     today = _today()
     today_text = f"{today.isoformat()} ({today:%A})"
+    direction = call.get("direction", "inbound")
     if not customer:
         return {"type": "conversation_initiation_client_data",
                 "dynamic_variables": {"contact_id": call["contactId"], "customer_name": "", "first_name": "",
-                                      "language": "en", "today": today_text, "caller_known": "false"},
+                                      "language": "en", "today": today_text, "caller_known": "false",
+                                      "call_direction": direction},
                 "conversation_config_override": {"agent": {"language": "en", "first_message": FIRST_MESSAGE_UNKNOWN}}}
-    lang = customer.language if customer.language in FIRST_MESSAGE else "en"
+    lang = customer.language if customer.language in ("es", "en") else "en"
     CALLS.update_item(Key={"contactId": call["contactId"]}, UpdateExpression="SET account = :a, #l = :l",
                       ExpressionAttributeNames={"#l": "language"}, ExpressionAttributeValues={":a": customer.account, ":l": lang})
     return {
         "type": "conversation_initiation_client_data",
         "dynamic_variables": {"contact_id": call["contactId"], "customer_name": customer.full_name,
                               "first_name": customer.first_name, "language": lang, "today": today_text,
-                              "caller_known": "true"},
-        "conversation_config_override": {"agent": {"language": lang,
-                                                   "first_message": FIRST_MESSAGE[lang].format(name=customer.full_name)}},
+                              "caller_known": "true", "call_direction": direction},
+        "conversation_config_override": {"agent": {"language": lang, "first_message":
+                                                   FIRST_MESSAGE[(lang, direction)].format(name=customer.full_name)}},
     }
 
 
@@ -190,7 +197,7 @@ def _post_call(body):
             _set_call(contact_id, conversationId=conversation, transcriptKey=f"{prefix}/transcript.json", aiSummary=summary,
                       status="done")
             call = CALLS.get_item(Key={"contactId": contact_id}).get("Item") or {}
-            _contact_attributes(call, {"elevenlabsConversationId": conversation, "aiCallSummary": summary,
+            _contact_attributes(call, {"aiConversationId": conversation, "aiCallSummary": summary,
                                        "transcriptS3": f"s3://{BUCKET}/{prefix}/transcript.json",
                                        "audioS3": f"s3://{BUCKET}/{prefix}/audio.mp3"})
         except Exception:  # an unknown contact id must not make ElevenLabs retry forever

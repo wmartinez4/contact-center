@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Contact flow "ElevenLabs Transfer" (route B) and its phone number.
+"""Contact flow "CS - Inbound - Sofia AI" (route B, named "ElevenLabs Transfer" until 2026-11-12) and its phone number.
 
 The first voice the caller hears is the ElevenLabs agent: Connect records and identifies silently.
 - Known caller with a special status (Redemptions, EPD): straight to a person, no AI.
@@ -7,7 +7,8 @@ The first voice the caller hears is the ElevenLabs agent: Connect records and id
   "resume flow after disconnect". The agent gives the recording notice, and asks unknown callers for their
   account number.
 - When ElevenLabs hangs up: escalate goes to the customer's queue (or general assistance), anything else ends.
-Re-runnable; attaches the flow to the "ElevenLabs" number.
+Re-runnable; attaches the flow to the "Sofia AI line" number.
+Names seen in Connect avoid the voice vendor: attribute aiAgent = "Sofia AI", flow and number named after Sofia.
 
     AWS_PROFILE=cs-admin python3 poc/infra/elevenlabs-route-b/setup_flow.py
 """
@@ -18,9 +19,9 @@ import boto3
 REGION = "us-east-1"
 EXPECTED_ACCOUNT = "383799408374"
 INSTANCE_ID = "c2f9ca2b-eb05-4a82-9809-1d7c914333ba"
-FLOW_NAME = "ElevenLabs Transfer"
+FLOW_NAME = "CS - Inbound - Sofia AI"
 ELEVENLABS_NUMBER = "+19528661775"     # Twilio number answered by collections-agent
-CONNECT_NUMBER = "+17752550671"        # Connect number described "ElevenLabs"
+CONNECT_NUMBER = "+17752550671"        # Connect number described "Sofia AI line"
 FALLBACK_QUEUE = "CS - General Assistance"
 VOICES = {"es": "Lupe", "en": "Danielle"}
 
@@ -71,7 +72,7 @@ act("Rec", "UpdateContactRecordingAndAnalyticsBehavior",
     "Identify", [(NM, "Identify"), ("ChannelMismatch", "Identify")])
 lam("Identify", "identify", "Remember", "Prepare")
 act("Remember", "UpdateContactAttributes", {"Attributes": {
-    "aiAgent": "elevenlabs", "customerFound": "$.External.found", "account": "$.External.account",
+    "aiAgent": "Sofia AI", "customerFound": "$.External.found", "account": "$.External.account",
     "customerName": "$.External.customerName", "language": "$.External.language",
     "canNegotiate": "$.External.canNegotiate", "queueArn": "$.External.queueArn"}, "TargetContact": "Current"},
     "LensLang", [(NM, "LensLang")])
@@ -91,7 +92,8 @@ for code, lang in (("Es", "es-US"), ("En", "en-US")):
 act("IsSpecial", "Compare", {"ComparisonValue": "$.Attributes.canNegotiate"}, "Prepare", [(NC, "Prepare")],
     [("false", "SpecialMsg")])
 lam("Prepare", "prepare_handoff", "Transfer", "FailMsg",
-    {"account": "$.Attributes.account", "language": "$.Attributes.language"})
+    {"account": "$.Attributes.account", "language": "$.Attributes.language",
+     "direction": "$.Attributes.direction"})
 act("Transfer", "TransferParticipantToThirdParty",
     {"ThirdPartyPhoneNumber": ELEVENLABS_NUMBER, "ThirdPartyConnectionTimeLimitSeconds": "30", "ContinueFlowExecution": "True"},
     "Outcome", [("CallFailed", "FailMsg"), ("ConnectionTimeLimitExceeded", "FailMsg"), (NM, "FailMsg")])

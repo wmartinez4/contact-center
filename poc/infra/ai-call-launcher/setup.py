@@ -21,7 +21,7 @@ DOMAIN = "amazon-connect-cs-connect-demo"
 NAME = "ai-call-launcher"
 APP_NAME = "Call with AI"
 NAMESPACE = "ai-call-launcher"
-FLOW_NAME = "ElevenLabs Transfer"
+FLOW_NAME = "CS - Inbound - Sofia AI"
 CALLER_ID = "+17752550671"
 # Account 10 (sandbox line, rings demo.caller2), account 2 (caller3's line, rings demo.caller3), both after
 # customer_line.py ring, and the real phone of account 9 (Mauricio Ordonez), who takes part in the demo.

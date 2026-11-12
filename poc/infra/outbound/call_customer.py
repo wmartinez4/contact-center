@@ -17,8 +17,8 @@ import boto3
 REGION, ACCOUNT = "us-east-1", "383799408374"
 IID = "c2f9ca2b-eb05-4a82-9809-1d7c914333ba"
 DOMAIN = "amazon-connect-cs-connect-demo"
-CALLER_ID = "+17752550671"  # the "ElevenLabs" Connect number
-FLOW_NAME = "ElevenLabs Transfer"
+CALLER_ID = "+17752550671"  # the "Sofia AI line" Connect number
+FLOW_NAME = "CS - Inbound - Sofia AI"
 CUSTOMER_AGENT = "demo.caller2"
 
 s = boto3.Session(region_name=REGION)

@@ -22,8 +22,8 @@ ROUTE = os.path.join(ROOT, "poc", "elevenlabs-ruta-b")
 STATE = json.load(open(os.path.join(ROUTE, ".state.json")))
 PROMPT = open(os.path.join(ROUTE, "agent", "prompt.md"), encoding="utf-8").read()
 
-FIRST_MESSAGE_ES = "Hola, le habla Sofía, asistente virtual del área de cuentas. ¿Hablo con el titular de la cuenta?"
-FIRST_MESSAGE_EN = "Hi, this is Sofia, a virtual assistant from the accounts team. Am I speaking with the account holder?"
+FIRST_MESSAGE_ES = "Hola, hablas con Sofía, del área de cuentas. ¿Hablo con el titular de la cuenta?"
+FIRST_MESSAGE_EN = "Hi, this is Sofia from the accounts team. Am I speaking with the account holder?"
 
 
 def env_key():
@@ -161,7 +161,8 @@ def configure_agent(tool_ids, secret_id, webhook_id):
                 "first_message": FIRST_MESSAGE_ES,
                 "dynamic_variables": {"dynamic_variable_placeholders": {
                     "contact_id": "test", "customer_name": "Maria Hernandez", "first_name": "Maria",
-                    "language": "es", "today": "2026-11-12 (Thursday)", "caller_known": "true"}},
+                    "language": "es", "today": "2026-11-12 (Thursday)", "caller_known": "true",
+                    "call_direction": "inbound"}},
                 "prompt": {"prompt": PROMPT, "tool_ids": tool_ids, "enable_parallel_tool_calls": False,
                            "built_in_tools": {"end_call": system("end_call"),
                                               "language_detection": system("language_detection",
